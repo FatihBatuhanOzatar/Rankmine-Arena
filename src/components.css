@@ -1,0 +1,58 @@
+/* src/components.css */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.card {
+    background-color: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.btn {
+    background-color: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.btn:hover {
+    background-color: var(--border);
+}
+
+.btnPrimary {
+    background-color: var(--accent);
+    color: white;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.btnPrimary:hover {
+    opacity: 0.9;
+}
+
+.input {
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
