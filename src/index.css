@@ -1,19 +1,66 @@
 /* src/index.css */
 :root {
-  --bg: #121212;
-  --panel: #1E1E1E;
-  --text: #E0E0E0;
-  --accent: #3B82F6;
-  --border: #333333;
+  /* Neo-Arcade default tokens */
+  --bg: #070A0F;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel2: rgba(255, 255, 255, 0.03);
+  --text: #D7E1FF;
+  --muted: rgba(215, 225, 255, 0.70);
+  --line: rgba(120, 220, 255, 0.18);
+  --cyan: #57E3FF;
+  --magenta: #FF4FD8;
+  --good: #47FF9A;
+  --bad: #FF5A7A;
+  --radius-card: 12px;
+  --radius-btn: 10px;
+  --radius-input: 8px;
+}
+
+[data-theme="calm"] {
+  --bg: #0B1020;
+  --panel: rgba(255, 255, 255, 0.07);
+  --text: #E9ECFF;
+  --cyan: #7AA7FF;
+  --magenta: #B69CFF;
 }
 
 body {
   margin: 0;
   padding: 0;
   background-color: var(--bg);
+  background-image:
+    /* Radial glows */
+    radial-gradient(ellipse at 20% 0%, rgba(87, 227, 255, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 0%, rgba(255, 79, 216, 0.08) 0%, transparent 60%),
+    /* Grid lines */
+    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(120, 220, 255, 0.06) 47px, rgba(120, 220, 255, 0.06) 48px),
+    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(120, 220, 255, 0.06) 47px, rgba(120, 220, 255, 0.06) 48px);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
+  min-height: 100vh;
+}
+
+body::after {
+  /* Scanlines overlay */
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 10px,
+      rgba(120, 220, 255, 0.04) 10px, rgba(120, 220, 255, 0.04) 12px);
+  z-index: 10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    display: none;
+  }
+
+  body {
+    background-image: none;
+    /* Strip back to dark flat on reduce motion */
+  }
 }
 
 * {
@@ -21,6 +68,6 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--cyan);
   text-decoration: none;
 }

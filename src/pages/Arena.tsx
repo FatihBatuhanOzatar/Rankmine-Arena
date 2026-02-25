@@ -1,17 +1,58 @@
-
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useStore } from '../state/store';
+import { Leaderboard } from '../components/arena/Leaderboard';
+import { ScoreTable } from '../components/arena/ScoreTable';
 
 export default function Arena() {
     const { id } = useParams();
+    const { loadArena, unloadArena, activeCompetition } = useStore();
+
+    useEffect(() => {
+        if (id) {
+            loadArena(id);
+        }
+        return () => unloadArena();
+    }, [id, loadArena, unloadArena]);
+
+    if (!id) return <div>No Arena ID</div>;
+    if (!activeCompetition) return <div className="container">Loading...</div>;
 
     return (
-        <div className="container">
-            <Link to="/" className="btn">← Back</Link>
-            <h1>Arena: {id}</h1>
-            <div className="card" style={{ marginTop: '24px' }}>
-                <p>Arena Page Placeholder</p>
-                <input type="text" className="input" placeholder="Type something..." />
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* Top Bar */}
+            <header style={{
+                height: '64px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 24px',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--panel)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <Link to="/" className="btn">← Back</Link>
+                    <h1 style={{ margin: 0, fontSize: '1.2rem' }}>{activeCompetition.title}</h1>
+                    <span className="chip" style={{
+                        fontFamily: 'monospace',
+                        border: '1px solid var(--border)',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px'
+                    }}>
+                        Score: {activeCompetition.scoring.min} - {activeCompetition.scoring.max}
+                    </span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Future Export btn */}
+                </div>
+            </header>
+
+            {/* Main Layout */}
+            <main style={{ flex: 1, display: 'flex', padding: '24px', overflow: 'hidden', gap: '24px' }}>
+                <Leaderboard />
+                <ScoreTable />
+            </main>
         </div>
     );
 }
