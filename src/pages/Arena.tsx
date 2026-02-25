@@ -1,13 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
 import { ScoreTable } from '../components/arena/ScoreTable';
+import { ManageContestants } from '../components/arena/ManageContestants';
+import { ManageRounds } from '../components/arena/ManageRounds';
 import { exportCompetition } from '../io';
 
 export default function Arena() {
     const { id } = useParams();
     const { loadArena, unloadArena, activeCompetition } = useStore();
+    const [showContestants, setShowContestants] = useState(false);
+    const [showRounds, setShowRounds] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -45,6 +49,8 @@ export default function Arena() {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn" onClick={() => setShowContestants(true)}>Manage Contestants</button>
+                    <button className="btn" onClick={() => setShowRounds(true)}>Manage Rounds</button>
                     <button className="btn" onClick={async () => {
                         if (confirm("Images are not included in JSON export. They remain local-only. Continue?")) {
                             await exportCompetition(activeCompetition.id);
@@ -52,6 +58,10 @@ export default function Arena() {
                     }}>Export JSON</button>
                 </div>
             </header>
+
+            {/* Modals */}
+            {showContestants && <ManageContestants onClose={() => setShowContestants(false)} />}
+            {showRounds && <ManageRounds onClose={() => setShowRounds(false)} />}
 
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', padding: '24px', overflow: 'hidden', gap: '24px' }}>
