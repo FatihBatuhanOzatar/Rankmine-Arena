@@ -168,6 +168,7 @@ async function touchCompetition(id: string) {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function touchCompetitionInTx(tx: any, id: string) {
     const store = tx.objectStore('competitions');
     const comp = await store.get(id);

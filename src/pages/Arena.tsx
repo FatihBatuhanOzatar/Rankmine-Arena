@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
 import { ScoreTable } from '../components/arena/ScoreTable';
+import { exportCompetition } from '../io';
 
 export default function Arena() {
     const { id } = useParams();
@@ -44,7 +45,11 @@ export default function Arena() {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Future Export btn */}
+                    <button className="btn" onClick={async () => {
+                        if (confirm("Images are not included in JSON export. They remain local-only. Continue?")) {
+                            await exportCompetition(activeCompetition.id);
+                        }
+                    }}>Export JSON</button>
                 </div>
             </header>
 

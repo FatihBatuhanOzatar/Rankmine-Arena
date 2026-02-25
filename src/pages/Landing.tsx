@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
+import { importCompetition } from '../io';
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -23,6 +24,19 @@ export default function Landing() {
     const handleDelete = async (id: string, title: string) => {
         if (confirm(`Are you sure you want to delete "${title}"?`)) {
             await deleteCompetition(id);
+        }
+    };
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const newId = await importCompetition(file);
+            navigate(`/arena/${newId}`);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                alert(`Failed to import: ${err.message}`);
+            }
         }
     };
 
@@ -61,7 +75,7 @@ export default function Landing() {
             </div>
 
             <h2>Recent Battles</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {competitions.length === 0 ? (
                     <p style={{ color: 'var(--muted)' }}>No recent competitions.</p>
                 ) : (
@@ -78,6 +92,11 @@ export default function Landing() {
                         </div>
                     ))
                 )}
+            </div>
+
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <h3 style={{ margin: 0 }}>Import Backup</h3>
+                <input type="file" accept=".json" onChange={handleImport} style={{ color: 'var(--text)', background: 'transparent' }} />
             </div>
         </div>
     );
