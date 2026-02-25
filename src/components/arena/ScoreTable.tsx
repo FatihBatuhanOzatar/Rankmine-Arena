@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { useStore } from '../../state/store';
 import { ScoreCell } from './ScoreCell';
 import { makeEntryId } from '../../domain';
@@ -8,11 +8,29 @@ export const ScoreTable = memo(function ScoreTable() {
     const contestants = useStore(s => s.contestants);
     const rounds = useStore(s => s.rounds);
 
+    const handleNavigate = useCallback((currentRow: number, currentCol: number, rowDelta: number, colDelta: number) => {
+        const nextRow = currentRow + rowDelta;
+        const nextCol = currentCol + colDelta;
+
+        // Boundary checks
+        if (nextRow < 0 || nextRow >= rounds.length) return;
+        if (nextCol < 0 || nextCol >= contestants.length) return;
+
+        const nextId = `cell-${nextRow}-${nextCol}`;
+        const elem = document.getElementById(nextId) as HTMLInputElement | null;
+
+        if (elem) {
+            elem.focus();
+            // Select all text for easy overwriting when navigating by keyboard
+            setTimeout(() => elem.select(), 0);
+        }
+    }, [rounds.length, contestants.length]);
+
     if (!activeCompetition) return null;
     const { min, max } = activeCompetition.scoring;
 
     return (
-        <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
+        <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel)', borderBottom: '1px solid var(--border)' }}>
                     <tr>
@@ -27,12 +45,12 @@ export const ScoreTable = memo(function ScoreTable() {
                     </tr>
                 </thead>
                 <tbody>
-                    {rounds.map(r => (
+                    {rounds.map((r, rIdx) => (
                         <tr key={r.id}>
                             <td style={{ padding: '12px', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                                 {r.title}
                             </td>
-                            {contestants.map(c => {
+                            {contestants.map((c, cIdx) => {
                                 const entryId = makeEntryId(activeCompetition.id, r.id, c.id);
                                 return (
                                     <ScoreCell
@@ -42,6 +60,9 @@ export const ScoreTable = memo(function ScoreTable() {
                                         entryId={entryId}
                                         min={min}
                                         max={max}
+                                        rowIdx={rIdx}
+                                        colIdx={cIdx}
+                                        onNavigate={(rowDelta, colDelta) => handleNavigate(rIdx, cIdx, rowDelta, colDelta)}
                                     />
                                 )
                             })}
