@@ -9,9 +9,10 @@ interface EntryModalProps {
     contestantId: string;
     min: number;
     max: number;
+    step: number;
 }
 
-export function EntryModal({ onClose, entry, roundId, contestantId, min, max }: EntryModalProps) {
+export function EntryModal({ onClose, entry, roundId, contestantId, min, max, step }: EntryModalProps) {
     const { upsertEntryField, saveAsset, getAssetBlob, deleteAsset } = useStore();
 
     // Form State mapped to current Entry
@@ -171,7 +172,7 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max }: 
                     <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--muted)' }}>Score ({min}-{max})</label>
-                            <input className="input" type="number" value={scoreStr} onChange={e => setScoreStr(e.target.value)} min={min} max={max} style={{ width: '100%' }} />
+                            <input className="input" type="number" step={step} value={scoreStr} onChange={e => setScoreStr(e.target.value)} min={min} max={max} style={{ width: '100%' }} />
                         </div>
 
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

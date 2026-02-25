@@ -27,7 +27,7 @@ export const ScoreTable = memo(function ScoreTable() {
     }, [rounds.length, contestants.length]);
 
     if (!activeCompetition) return null;
-    const { min, max } = activeCompetition.scoring;
+    const { scoreMin: min, scoreMax: max, scoreStep: step, scoringMode: mode } = activeCompetition;
 
     return (
         <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
@@ -60,6 +60,8 @@ export const ScoreTable = memo(function ScoreTable() {
                                         entryId={entryId}
                                         min={min}
                                         max={max}
+                                        step={step}
+                                        mode={mode}
                                         rowIdx={rIdx}
                                         colIdx={cIdx}
                                         onNavigate={(rowDelta, colDelta) => handleNavigate(rIdx, cIdx, rowDelta, colDelta)}

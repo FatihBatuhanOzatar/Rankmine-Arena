@@ -7,7 +7,10 @@ export function createAITemplateCombo(): { competition: Competition; contestants
     const competition: Competition = {
         id: compId,
         title: 'AI Image Models Battle',
-        scoring: { min: 0, max: 10, integerOnly: true },
+        scoreMin: 0,
+        scoreMax: 10,
+        scoreStep: 1,
+        scoringMode: 'numeric',
         createdAt: now,
         updatedAt: now,
         ui: { theme: 'neoArcade', density: 'comfortable' },
