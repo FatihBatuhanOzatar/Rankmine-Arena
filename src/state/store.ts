@@ -27,6 +27,16 @@ export interface ArenaState {
     upsertEntry: (roundId: string, contestantId: string, score: number | undefined) => void;
     upsertEntryField: (roundId: string, contestantId: string, partial: Partial<Entry>) => void;
 
+    // --- Contestant Management ---
+    addContestant: (name: string) => Promise<void>;
+    renameContestant: (id: string, name: string) => Promise<void>;
+    removeContestant: (id: string) => Promise<void>;
+
+    // --- Round Management ---
+    addRound: (title: string) => Promise<void>;
+    renameRound: (id: string, title: string) => Promise<void>;
+    removeRound: (id: string) => Promise<void>;
+
     // --- Assets ---
     saveAsset: (blob: Blob) => Promise<string>;
     getAssetBlob: (assetId: string) => Promise<Blob | undefined>;
@@ -175,6 +185,155 @@ export const useStore = create<ArenaState>((set, get) => ({
         flushTimeoutId = setTimeout(() => {
             get().flushPending();
         }, 300);
+    },
+
+    // --- Contestant Management ---
+    addContestant: async (name: string) => {
+        const { activeCompetition, rounds, contestants, entriesById } = get();
+        if (!activeCompetition) return;
+
+        const compId = activeCompetition.id;
+        const newContestant: Contestant = {
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            name,
+            createdAt: Date.now()
+        };
+
+        await repos.saveContestant(newContestant);
+
+        // Generate empty entries for all existing rounds
+        const newEntries = rounds.map(r => ({
+            id: makeEntryId(compId, r.id, newContestant.id),
+            competitionId: compId,
+            roundId: r.id,
+            contestantId: newContestant.id,
+            score: undefined,
+            updatedAt: Date.now()
+        }));
+
+        if (newEntries.length > 0) {
+            await repos.saveEntries(newEntries);
+        }
+
+        const newEntriesById = { ...entriesById };
+        for (const e of newEntries) {
+            newEntriesById[e.id] = e;
+        }
+
+        set({
+            contestants: [...contestants, newContestant],
+            entriesById: newEntriesById
+        });
+    },
+
+    renameContestant: async (id: string, name: string) => {
+        const { contestants } = get();
+        const existing = contestants.find(c => c.id === id);
+        if (!existing) return;
+
+        const updated = { ...existing, name };
+        await repos.saveContestant(updated);
+
+        set({
+            contestants: contestants.map(c => c.id === id ? updated : c)
+        });
+    },
+
+    removeContestant: async (id: string) => {
+        const { contestants, entriesById, activeCompetition } = get();
+        if (!activeCompetition) return;
+
+        await repos.deleteContestant(id);
+
+        const newEntriesById = { ...entriesById };
+        // Delete all keys belonging to this contestant
+        for (const key of Object.keys(newEntriesById)) {
+            if (newEntriesById[key].contestantId === id) {
+                delete newEntriesById[key];
+            }
+        }
+
+        set({
+            contestants: contestants.filter(c => c.id !== id),
+            entriesById: newEntriesById
+        });
+    },
+
+    // --- Round Management ---
+    addRound: async (title: string) => {
+        const { activeCompetition, rounds, contestants, entriesById } = get();
+        if (!activeCompetition) return;
+
+        const compId = activeCompetition.id;
+        const orderIndex = rounds.length > 0 ? Math.max(...rounds.map(r => r.orderIndex)) + 1 : 0;
+
+        const newRound: Round = {
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            title,
+            orderIndex,
+            createdAt: Date.now()
+        };
+
+        await repos.saveRound(newRound);
+
+        // Generate empty entries for all existing contestants
+        const newEntries = contestants.map(c => ({
+            id: makeEntryId(compId, newRound.id, c.id),
+            competitionId: compId,
+            roundId: newRound.id,
+            contestantId: c.id,
+            score: undefined,
+            updatedAt: Date.now()
+        }));
+
+        if (newEntries.length > 0) {
+            await repos.saveEntries(newEntries);
+        }
+
+        const newEntriesById = { ...entriesById };
+        for (const e of newEntries) {
+            newEntriesById[e.id] = e;
+        }
+
+        set({
+            rounds: [...rounds, newRound],
+            entriesById: newEntriesById
+        });
+    },
+
+    renameRound: async (id: string, title: string) => {
+        const { rounds } = get();
+        const existing = rounds.find(r => r.id === id);
+        if (!existing) return;
+
+        const updated = { ...existing, title };
+        await repos.saveRound(updated);
+
+        set({
+            rounds: rounds.map(r => r.id === id ? updated : r)
+        });
+    },
+
+    removeRound: async (id: string) => {
+        const { rounds, entriesById, activeCompetition } = get();
+        if (!activeCompetition) return;
+
+        await repos.deleteRound(id);
+
+        const newEntriesById = { ...entriesById };
+        // Delete all keys belonging to this round
+        for (const key of Object.keys(newEntriesById)) {
+            if (newEntriesById[key].roundId === id) {
+                delete newEntriesById[key];
+            }
+        }
+
+        set({
+            rounds: rounds.filter(r => r.id !== id),
+            entriesById: newEntriesById
+        });
     },
 
     // --- Assets ---
