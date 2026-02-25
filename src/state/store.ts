@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Competition, Contestant, Round, Entry } from '../domain';
 import { makeEntryId } from '../domain';
 import * as repos from '../db/repos';
+import { getDB } from '../db/idb';
 import { createAITemplateCombo } from '../templates/ai-image-models-battle';
 
 export interface ArenaState {
@@ -24,7 +25,12 @@ export interface ArenaState {
 
     // --- Mutations ---
     upsertEntry: (roundId: string, contestantId: string, score: number | undefined) => void;
-    // TODO Add rounds/contestants mutating logic when we build it out M3/M4
+    upsertEntryField: (roundId: string, contestantId: string, partial: Partial<Entry>) => void;
+
+    // --- Assets ---
+    saveAsset: (blob: Blob) => Promise<string>;
+    getAssetBlob: (assetId: string) => Promise<Blob | undefined>;
+    deleteAsset: (assetId: string) => Promise<void>;
 
     // --- Pending DB Writes ---
     pendingEntryWrites: Record<string, Entry>;
@@ -68,7 +74,6 @@ export const useStore = create<ArenaState>((set, get) => ({
         await repos.saveCompetition(competition);
         for (const c of contestants) await repos.saveContestant(c);
         for (const r of rounds) await repos.saveRound(r);
-        // Note: starts with no entries/scores
         return competition.id;
     },
 
@@ -88,7 +93,7 @@ export const useStore = create<ArenaState>((set, get) => ({
                 if (s.activeCompetition?.id === id) {
                     return { activeCompetition: { ...s.activeCompetition, title: newTitle } };
                 }
-                return {}; // no active arena state change needed, just fetch competitions below
+                return {};
             });
 
             await get().loadCompetitions();
@@ -99,7 +104,7 @@ export const useStore = create<ArenaState>((set, get) => ({
     loadArena: async (id: string) => {
         const active = await repos.getCompetition(id);
         if (!active) {
-            set({ activeCompetition: null }); // Error state handling out of scope here
+            set({ activeCompetition: null });
             return;
         }
 
@@ -124,7 +129,6 @@ export const useStore = create<ArenaState>((set, get) => ({
     },
 
     unloadArena: () => {
-        // Force flush strictly if leaving
         get().flushPending();
         set({
             activeCompetition: null,
@@ -137,6 +141,10 @@ export const useStore = create<ArenaState>((set, get) => ({
 
     // --- Mutation ---
     upsertEntry: (roundId: string, contestantId: string, score: number | undefined) => {
+        get().upsertEntryField(roundId, contestantId, { score });
+    },
+
+    upsertEntryField: (roundId: string, contestantId: string, partial: Partial<Entry>) => {
         const { activeCompetition, entriesById } = get();
         if (!activeCompetition) return;
 
@@ -146,14 +154,15 @@ export const useStore = create<ArenaState>((set, get) => ({
         const prev = entriesById[entryId];
         const next: Entry = prev ? {
             ...prev,
-            score,
+            ...partial,
             updatedAt: Date.now()
         } : {
             id: entryId,
             competitionId: compId,
             roundId,
             contestantId,
-            score,
+            score: undefined,
+            ...partial,
             updatedAt: Date.now()
         };
 
@@ -162,11 +171,41 @@ export const useStore = create<ArenaState>((set, get) => ({
             pendingEntryWrites: { ...state.pendingEntryWrites, [entryId]: next }
         }));
 
-        // Flush management Debounce 300ms
         if (flushTimeoutId) clearTimeout(flushTimeoutId);
         flushTimeoutId = setTimeout(() => {
             get().flushPending();
         }, 300);
+    },
+
+    // --- Assets ---
+    saveAsset: async (blob: Blob) => {
+        const db = await getDB();
+        const assetId = crypto.randomUUID();
+        await db.put('assets', { id: assetId, blob });
+
+        const compId = get().activeCompetition?.id || 'unknown';
+        await db.put('assetMeta', {
+            id: assetId,
+            competitionId: compId,
+            mimeType: blob.type,
+            sizeBytes: blob.size,
+            createdAt: Date.now(),
+        });
+        return assetId;
+    },
+
+    getAssetBlob: async (assetId: string) => {
+        const db = await getDB();
+        const rec = await db.get('assets', assetId);
+        return rec?.blob;
+    },
+
+    deleteAsset: async (assetId: string) => {
+        const db = await getDB();
+        const tx = db.transaction(['assets', 'assetMeta'], 'readwrite');
+        await tx.objectStore('assets').delete(assetId);
+        await tx.objectStore('assetMeta').delete(assetId);
+        await tx.done;
     },
 
     // --- Sync Back ---
@@ -175,13 +214,12 @@ export const useStore = create<ArenaState>((set, get) => ({
         const entriesToSave = Object.values(pendingEntryWrites);
         if (entriesToSave.length === 0) return;
 
-        set({ pendingEntryWrites: {} }); // Clear immediately so new edits don't conflict
+        set({ pendingEntryWrites: {} });
         await repos.saveEntries(entriesToSave);
     }
 
 }));
 
-// Window blur best-effort guarantee to save
 if (typeof window !== 'undefined') {
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === 'hidden') {
