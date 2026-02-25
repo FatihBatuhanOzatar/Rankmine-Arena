@@ -4,12 +4,14 @@ import type { Competition, Contestant, Round, Entry } from '../domain';
 // --- Competitions ---
 export async function listCompetitions(): Promise<Competition[]> {
     const db = await getDB();
-    return db.getAllFromIndex('competitions', 'updatedAt');
+    const list = await db.getAllFromIndex('competitions', 'updatedAt');
+    return list.map(hydrateCompetition);
 }
 
 export async function getCompetition(id: string): Promise<Competition | undefined> {
     const db = await getDB();
-    return db.get('competitions', id);
+    const c = await db.get('competitions', id);
+    return c ? hydrateCompetition(c) : undefined;
 }
 
 export async function saveCompetition(comp: Competition): Promise<void> {
@@ -176,4 +178,22 @@ async function touchCompetitionInTx(tx: any, id: string) {
         comp.updatedAt = Date.now();
         await store.put(comp);
     }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hydrateCompetition(c: any): Competition {
+    if (c.scoring !== undefined) {
+        c.scoreMin = c.scoring.min ?? 0;
+        c.scoreMax = c.scoring.max ?? 10;
+        c.scoreStep = 1;
+        c.scoringMode = 'numeric';
+        delete c.scoring;
+    } else {
+        // Just in case it's a completely empty object somehow
+        c.scoreMin = c.scoreMin ?? 0;
+        c.scoreMax = c.scoreMax ?? 10;
+        c.scoreStep = c.scoreStep ?? 1;
+        c.scoringMode = c.scoringMode ?? 'numeric';
+    }
+    return c as Competition;
 }

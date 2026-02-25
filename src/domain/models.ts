@@ -1,7 +1,13 @@
 export interface Competition {
     id: string;                          // uuid
     title: string;
-    scoring: { min: number; max: number; integerOnly: boolean };
+
+    scoreMin: number;
+    scoreMax: number;
+    scoreStep: number;
+    scoreUnit?: string;
+    scoringMode: 'numeric' | 'slider' | 'stars';
+
     createdAt: number;                   // Date.now()
     updatedAt: number;
     ui: { theme: 'neoArcade' | 'calm'; density: 'comfortable' | 'compact' };
