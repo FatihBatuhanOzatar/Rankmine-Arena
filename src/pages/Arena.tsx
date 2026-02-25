@@ -5,13 +5,18 @@ import { Leaderboard } from '../components/arena/Leaderboard';
 import { ScoreTable } from '../components/arena/ScoreTable';
 import { ManageContestants } from '../components/arena/ManageContestants';
 import { ManageRounds } from '../components/arena/ManageRounds';
+import { ManageSettings } from '../components/arena/ManageSettings';
 import { exportCompetition } from '../io';
 
 export default function Arena() {
     const { id } = useParams();
-    const { loadArena, unloadArena, activeCompetition } = useStore();
+    const { loadArena, unloadArena, activeCompetition, updateCompetition } = useStore();
     const [showContestants, setShowContestants] = useState(false);
     const [showRounds, setShowRounds] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [titleStr, setTitleStr] = useState('');
 
     useEffect(() => {
         if (id) {
@@ -37,15 +42,56 @@ export default function Arena() {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <Link to="/" className="btn">← Back</Link>
-                    <h1 style={{ margin: 0, fontSize: '1.2rem' }}>{activeCompetition.title}</h1>
-                    <span className="chip" style={{
-                        fontFamily: 'monospace',
-                        border: '1px solid var(--border)',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px'
-                    }}>
-                        Score: {activeCompetition.scoring.min} - {activeCompetition.scoring.max}
+
+                    {isEditingTitle ? (
+                        <input
+                            autoFocus
+                            className="input"
+                            value={titleStr}
+                            onChange={e => setTitleStr(e.target.value)}
+                            onBlur={() => {
+                                setIsEditingTitle(false);
+                                if (titleStr.trim() && titleStr !== activeCompetition.title) {
+                                    updateCompetition(activeCompetition.id, { title: titleStr.trim() });
+                                }
+                            }}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    e.currentTarget.blur();
+                                } else if (e.key === 'Escape') {
+                                    setTitleStr(activeCompetition.title);
+                                    setIsEditingTitle(false);
+                                }
+                            }}
+                            style={{ margin: 0, fontSize: '1.2rem', padding: '4px 8px' }}
+                        />
+                    ) : (
+                        <h1
+                            style={{ margin: 0, fontSize: '1.2rem', cursor: 'pointer' }}
+                            onClick={() => {
+                                setTitleStr(activeCompetition.title);
+                                setIsEditingTitle(true);
+                            }}
+                            title="Click to rename"
+                        >
+                            {activeCompetition.title}
+                        </h1>
+                    )}
+
+                    <span
+                        className="chip"
+                        onClick={() => setShowSettings(true)}
+                        title="Configure Scoring"
+                        style={{
+                            fontFamily: 'monospace',
+                            border: '1px solid var(--border)',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Score: {activeCompetition.scoreMin} - {activeCompetition.scoreMax}{activeCompetition.scoreUnit ? ` ${activeCompetition.scoreUnit}` : ''}
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -62,6 +108,7 @@ export default function Arena() {
             {/* Modals */}
             {showContestants && <ManageContestants onClose={() => setShowContestants(false)} />}
             {showRounds && <ManageRounds onClose={() => setShowRounds(false)} />}
+            {showSettings && <ManageSettings onClose={() => setShowSettings(false)} />}
 
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', padding: '24px', overflow: 'hidden', gap: '24px' }}>

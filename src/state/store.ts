@@ -12,7 +12,7 @@ export interface ArenaState {
     createCompetition: (title: string) => Promise<string>;
     createFromTemplate: () => Promise<string>;
     deleteCompetition: (id: string) => Promise<void>;
-    renameCompetition: (id: string, title: string) => Promise<void>;
+    updateCompetition: (id: string, partial: Partial<Competition>) => Promise<void>;
 
     // --- Arena State ---
     activeCompetition: Competition | null;
@@ -70,7 +70,10 @@ export const useStore = create<ArenaState>((set, get) => ({
         const c: Competition = {
             id,
             title,
-            scoring: { min: 0, max: 10, integerOnly: true },
+            scoreMin: 0,
+            scoreMax: 10,
+            scoreStep: 1,
+            scoringMode: 'numeric',
             createdAt: now,
             updatedAt: now,
             ui: { theme: 'neoArcade', density: 'comfortable' },
@@ -92,16 +95,16 @@ export const useStore = create<ArenaState>((set, get) => ({
         await get().loadCompetitions();
     },
 
-    renameCompetition: async (id: string, newTitle: string) => {
+    updateCompetition: async (id: string, partial: Partial<Competition>) => {
         const c = await repos.getCompetition(id);
         if (c) {
-            c.title = newTitle;
-            c.updatedAt = Date.now();
-            await repos.saveCompetition(c);
+            const updated = { ...c, ...partial, updatedAt: Date.now() };
+            await repos.saveCompetition(updated);
 
             set(s => {
                 if (s.activeCompetition?.id === id) {
-                    return { activeCompetition: { ...s.activeCompetition, title: newTitle } };
+                    // Update active arena if it's the one we just edited
+                    return { activeCompetition: updated };
                 }
                 return {};
             });
