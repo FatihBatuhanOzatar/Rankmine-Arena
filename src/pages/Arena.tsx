@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
 import { ScoreTable } from '../components/arena/ScoreTable';
@@ -29,7 +29,7 @@ export default function Arena() {
     if (!activeCompetition) return <div className="container">Loading...</div>;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Top Bar */}
             <header style={{
                 height: '64px',
@@ -37,12 +37,10 @@ export default function Arena() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0 24px',
-                borderBottom: '1px solid var(--border)',
+                borderBottom: '1px solid var(--line)',
                 background: 'var(--panel)'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <Link to="/" className="btn">← Back</Link>
-
                     {isEditingTitle ? (
                         <input
                             autoFocus

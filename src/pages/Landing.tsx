@@ -39,14 +39,7 @@ export default function Landing() {
         }
     };
 
-    const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'neoArcade');
     const [confirmDelete, setConfirmDelete] = useState<{ id: string, title: string } | null>(null);
-
-    const toggleTheme = () => {
-        const next = theme === 'neoArcade' ? 'calm' : 'neoArcade';
-        setTheme(next);
-        document.documentElement.setAttribute('data-theme', next);
-    };
 
     const handleDeleteConfirm = async () => {
         if (confirmDelete) {
@@ -56,17 +49,7 @@ export default function Landing() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '800px' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                <h1 style={{ margin: 0 }}>Rankmine Arena</h1>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                    <button className="btn" onClick={toggleTheme} title="Toggle Theme">
-                        {theme === 'neoArcade' ? '🔮 Neo-Arcade' : '☁️ Calm'}
-                    </button>
-                    <button className="btnPrimary" onClick={handleCreateEmpty}>New Arena</button>
-                </div>
-            </header>
-
+        <div className="container" style={{ maxWidth: '800px', paddingTop: '40px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
                 <div className="card">
                     <h2>New Empty Arena</h2>
