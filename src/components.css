@@ -108,3 +108,8 @@
 ::-webkit-scrollbar-thumb:hover {
     background: var(--cyan);
 }
+
+.recent-battle-card:hover {
+    box-shadow: 0 0 12px rgba(87, 227, 255, 0.15);
+    transform: translateY(-1px);
+}

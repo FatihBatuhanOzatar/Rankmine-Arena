@@ -14,36 +14,31 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
 
     if (!activeCompetition) return null;
 
+    const scoreMin = parseFloat(minStr);
+    const scoreMax = parseFloat(maxStr);
+    const scoreStep = parseFloat(stepStr);
+    const finalStep = mode === 'stars' ? parseFloat(starStep) : scoreStep;
+
+    let canSave = true;
+    let disabledReason = '';
+
+    if (isNaN(scoreMin) || isNaN(scoreMax) || isNaN(finalStep)) {
+        canSave = false;
+        disabledReason = 'Min, Max, and Step must be valid numbers.';
+    } else if (scoreMin >= scoreMax) {
+        canSave = false;
+        disabledReason = 'Min score must be strictly less than Max score.';
+    } else if (finalStep <= 0) {
+        canSave = false;
+        disabledReason = 'Step must be strictly positive.';
+    } else if (mode === 'stars' && (scoreMax - scoreMin) > 10) {
+        canSave = false;
+        disabledReason = 'Star mode is recommended up to 10 stars. Reduce Max-Min or switch to Slider/Numeric.';
+    }
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        const scoreMin = parseFloat(minStr);
-        const scoreMax = parseFloat(maxStr);
-        const scoreStep = parseFloat(stepStr);
-
-        const finalStep = mode === 'stars' ? parseFloat(starStep) : scoreStep;
-
-        if (isNaN(scoreMin) || isNaN(scoreMax) || isNaN(finalStep)) {
-            alert('Min, Max, and Step must be valid numbers.');
-            return;
-        }
-
-        if (scoreMin >= scoreMax) {
-            alert('Min score must be strictly less than Max score.');
-            return;
-        }
-
-        if (finalStep <= 0) {
-            alert('Step must be strictly positive.');
-            return;
-        }
-
-        if (mode === 'stars' && (scoreMax - scoreMin) / finalStep > 10) {
-            alert('Stars mode is only recommended for ranges with 10 or fewer steps. Please use slider or numeric.');
-            if (scoreMax - scoreMin > 10) {
-                alert('Stars mode is only valid if (max - min) <= 10.');
-                return;
-            }
-        }
+        if (!canSave) return;
 
         await updateScoringConfig(activeCompetition.id, {
             scoreMin,
@@ -124,7 +119,45 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                         <button type="button" className="btn" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="btnPrimary">Save Settings</button>
+
+                        <div style={{ position: 'relative', display: 'inline-block' }}
+                            onMouseEnter={(e) => {
+                                const tooltip = e.currentTarget.querySelector('.settings-tooltip') as HTMLElement;
+                                if (tooltip && !canSave) tooltip.style.visibility = 'visible';
+                            }}
+                            onMouseLeave={(e) => {
+                                const tooltip = e.currentTarget.querySelector('.settings-tooltip') as HTMLElement;
+                                if (tooltip) tooltip.style.visibility = 'hidden';
+                            }}
+                        >
+                            {!canSave && (
+                                <div className="settings-tooltip card" style={{
+                                    visibility: 'hidden',
+                                    position: 'absolute',
+                                    bottom: '100%',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    marginBottom: '8px',
+                                    width: '250px',
+                                    fontSize: '12px',
+                                    padding: '8px',
+                                    textAlign: 'center',
+                                    zIndex: 10,
+                                    border: '1px solid var(--bad)',
+                                    pointerEvents: 'none'
+                                }}>
+                                    {disabledReason}
+                                </div>
+                            )}
+                            <button
+                                type="submit"
+                                className="btnPrimary"
+                                disabled={!canSave}
+                                style={{ opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed' }}
+                            >
+                                Save Settings
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

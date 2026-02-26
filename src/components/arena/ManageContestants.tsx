@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useStore } from '../../state/store';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 export function ManageContestants({ onClose }: { onClose: () => void }) {
     const { contestants, addContestant, renameContestant, removeContestant } = useStore();
     const [newName, setNewName] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string, name: string } | null>(null);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -13,9 +15,14 @@ export function ManageContestants({ onClose }: { onClose: () => void }) {
         setNewName('');
     };
 
-    const handleDelete = async (id: string, name: string) => {
-        if (confirm(`Are you sure you want to delete contestant "${name}"?\n\nThis will permanently delete all scores and notes associated with this contestant.`)) {
-            await removeContestant(id);
+    const handleDelete = (id: string, name: string) => {
+        setConfirmDelete({ id, name });
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (confirmDelete) {
+            await removeContestant(confirmDelete.id);
+            setConfirmDelete(null);
         }
     };
 
@@ -84,6 +91,15 @@ export function ManageContestants({ onClose }: { onClose: () => void }) {
                     <button type="submit" className="btnPrimary" disabled={!newName.trim()}>Add</button>
                 </form>
             </div>
+
+            <ConfirmDialog
+                isOpen={!!confirmDelete}
+                title="Delete contestant?"
+                body={<>Are you sure you want to delete contestant <strong>{confirmDelete?.name}</strong>?<br /><br />This will permanently delete all scores and notes associated with this contestant.</>}
+                confirmLabel="Delete"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmDelete(null)}
+            />
         </div>
     );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { importCompetition } from '../io';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -21,10 +22,8 @@ export default function Landing() {
         navigate(`/arena/${id}`);
     };
 
-    const handleDelete = async (id: string, title: string) => {
-        if (confirm(`Are you sure you want to delete "${title}"?`)) {
-            await deleteCompetition(id);
-        }
+    const handleDelete = (id: string, title: string) => {
+        setConfirmDelete({ id, title });
     };
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,11 +40,19 @@ export default function Landing() {
     };
 
     const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'neoArcade');
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string, title: string } | null>(null);
 
     const toggleTheme = () => {
         const next = theme === 'neoArcade' ? 'calm' : 'neoArcade';
         setTheme(next);
         document.documentElement.setAttribute('data-theme', next);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (confirmDelete) {
+            await deleteCompetition(confirmDelete.id);
+            setConfirmDelete(null);
+        }
     };
 
     return (
@@ -80,14 +87,34 @@ export default function Landing() {
                     <p style={{ color: 'var(--muted)' }}>No recent competitions.</p>
                 ) : (
                     competitions.map(c => (
-                        <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
+                        <div
+                            key={c.id}
+                            className="card recent-battle-card"
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                            onClick={() => navigate(`/arena/${c.id}`)}
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    navigate(`/arena/${c.id}`);
+                                }
+                            }}
+                        >
                             <div>
                                 <h3 style={{ margin: '0 0 4px 0' }}>{c.title}</h3>
                                 <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Updated: {new Date(c.updatedAt).toLocaleString()}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button className="btn" onClick={() => navigate(`/arena/${c.id}`)}>Open</button>
-                                <button className="btn" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={() => handleDelete(c.id, c.title)}>Delete</button>
+                                <button
+                                    className="btn"
+                                    style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(c.id, c.title);
+                                    }}
+                                >
+                                    Delete
+                                </button>
                             </div>
                         </div>
                     ))
@@ -98,6 +125,15 @@ export default function Landing() {
                 <h3 style={{ margin: 0 }}>Import Backup</h3>
                 <input type="file" accept=".json" onChange={handleImport} style={{ color: 'var(--text)', background: 'transparent' }} />
             </div>
+
+            <ConfirmDialog
+                isOpen={!!confirmDelete}
+                title="Delete competition?"
+                body={<>This will permanently remove <strong>{confirmDelete?.title}</strong> and all its local data.</>}
+                confirmLabel="Delete"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmDelete(null)}
+            />
         </div>
     );
 }

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useStore } from '../../state/store';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 export function ManageRounds({ onClose }: { onClose: () => void }) {
     const { rounds, addRound, renameRound, removeRound } = useStore();
     const [newTitle, setNewTitle] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string, title: string } | null>(null);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -13,9 +15,14 @@ export function ManageRounds({ onClose }: { onClose: () => void }) {
         setNewTitle('');
     };
 
-    const handleDelete = async (id: string, title: string) => {
-        if (confirm(`Are you sure you want to delete round "${title}"?\n\nThis will permanently delete all scores and notes associated with this round.`)) {
-            await removeRound(id);
+    const handleDelete = (id: string, title: string) => {
+        setConfirmDelete({ id, title });
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (confirmDelete) {
+            await removeRound(confirmDelete.id);
+            setConfirmDelete(null);
         }
     };
 
@@ -84,6 +91,15 @@ export function ManageRounds({ onClose }: { onClose: () => void }) {
                     <button type="submit" className="btnPrimary" disabled={!newTitle.trim()}>Add</button>
                 </form>
             </div>
+
+            <ConfirmDialog
+                isOpen={!!confirmDelete}
+                title="Delete round?"
+                body={<>Are you sure you want to delete round <strong>{confirmDelete?.title}</strong>?<br /><br />This will permanently delete all scores and notes associated with this round.</>}
+                confirmLabel="Delete"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setConfirmDelete(null)}
+            />
         </div>
     );
 }
