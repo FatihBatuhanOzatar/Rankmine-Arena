@@ -13,6 +13,7 @@ export interface ArenaState {
     createFromTemplate: () => Promise<string>;
     deleteCompetition: (id: string) => Promise<void>;
     updateCompetition: (id: string, partial: Partial<Competition>) => Promise<void>;
+    updateScoringConfig: (id: string, config: Pick<Competition, 'scoreMin' | 'scoreMax' | 'scoreStep' | 'scoringMode' | 'scoreUnit'>) => Promise<void>;
 
     // --- Arena State ---
     activeCompetition: Competition | null;
@@ -111,6 +112,61 @@ export const useStore = create<ArenaState>((set, get) => ({
 
             await get().loadCompetitions();
         }
+    },
+
+    updateScoringConfig: async (id: string, config: Pick<Competition, 'scoreMin' | 'scoreMax' | 'scoreStep' | 'scoringMode' | 'scoreUnit'>) => {
+        const { activeCompetition, entriesById } = get();
+        if (!activeCompetition || activeCompetition.id !== id) return;
+
+        const oldMin = activeCompetition.scoreMin;
+        const oldMax = activeCompetition.scoreMax;
+
+        const newMin = config.scoreMin;
+        const newMax = config.scoreMax;
+        const newStep = config.scoreStep;
+
+        const updatedComp = { ...activeCompetition, ...config, updatedAt: Date.now() };
+        await repos.saveCompetition(updatedComp);
+
+        const newEntriesById = { ...entriesById };
+        const entriesToSave: Entry[] = [];
+
+        for (const key of Object.keys(newEntriesById)) {
+            const entry = newEntriesById[key];
+            if (entry.score !== undefined) {
+                // Normalize t [0, 1]
+                const t = oldMax > oldMin ? (entry.score - oldMin) / (oldMax - oldMin) : 0;
+
+                // Map to new bounds
+                let newScore = newMin + t * (newMax - newMin);
+
+                // Snap to step using round to nearest multiple
+                newScore = Math.round(newScore / newStep) * newStep;
+
+                // Precision fix for arbitrary decimals
+                newScore = parseFloat(newScore.toFixed(5));
+
+                // Clamp
+                if (newScore < newMin) newScore = newMin;
+                if (newScore > newMax) newScore = newMax;
+
+                if (newScore !== entry.score) {
+                    newEntriesById[key] = { ...entry, score: newScore, updatedAt: Date.now() };
+                    entriesToSave.push(newEntriesById[key]);
+                }
+            }
+        }
+
+        if (entriesToSave.length > 0) {
+            await repos.saveEntries(entriesToSave);
+        }
+
+        set({
+            activeCompetition: updatedComp,
+            entriesById: newEntriesById
+        });
+
+        await get().loadCompetitions();
     },
 
     // --- Arena Load/Unload

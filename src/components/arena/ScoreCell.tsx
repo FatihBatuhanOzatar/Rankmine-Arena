@@ -136,7 +136,7 @@ export const ScoreCell = memo(function ScoreCell({
             )}
 
             {mode === 'stars' && (() => {
-                const totalStars = Math.floor((max - min) / step);
+                const totalStars = Math.max(0, Math.ceil(max - min));
                 const isActive = typeof val === 'number';
                 return (
                     <div
@@ -147,16 +147,49 @@ export const ScoreCell = memo(function ScoreCell({
                         tabIndex={0}
                         onKeyDown={handleKeyDown}
                     >
+                        {step === 0.5 && (
+                            <svg width="0" height="0" style={{ position: 'absolute' }}>
+                                <defs>
+                                    <linearGradient id={`half-${entryId}`} x1="0" x2="1" y1="0" y2="0">
+                                        <stop offset="50%" stopColor="#FFC107" />
+                                        <stop offset="50%" stopColor="transparent" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        )}
                         {Array.from({ length: totalStars }).map((_, i) => {
-                            const starVal = min + (i + 1) * step;
-                            const filled = isActive && val >= starVal;
+                            const starValRight = min + i + 1;
+                            const starValLeft = min + i + 0.5;
+
+                            let fill = 'transparent';
+                            let stroke = 'var(--muted)';
+
+                            if (isActive) {
+                                if (val >= starValRight) {
+                                    fill = '#FFC107';
+                                    stroke = '#FFC107';
+                                } else if (step === 0.5 && val >= starValLeft) {
+                                    fill = `url(#half-${entryId})`;
+                                    stroke = '#FFC107'; // outline glows
+                                }
+                            }
+
                             return (
                                 <svg
                                     key={i}
-                                    onClick={() => handleStarClick(starVal)}
+                                    onClick={(e) => {
+                                        if (step === 0.5) {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            if (e.clientX - rect.left < rect.width / 2) {
+                                                handleStarClick(starValLeft);
+                                                return;
+                                            }
+                                        }
+                                        handleStarClick(starValRight);
+                                    }}
                                     viewBox="0 0 24 24"
                                     width="18" height="18"
-                                    style={{ cursor: 'pointer', fill: filled ? 'var(--accent)' : 'transparent', stroke: filled ? 'var(--accent)' : 'var(--muted)', strokeWidth: '2px', transition: 'all 0.15s' }}
+                                    style={{ cursor: 'pointer', fill, stroke, strokeWidth: '2px', transition: 'all 0.15s' }}
                                 >
                                     <polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" />
                                 </svg>

@@ -3,11 +3,12 @@ import { useStore } from '../../state/store';
 import type { Competition } from '../../domain';
 
 export function ManageSettings({ onClose }: { onClose: () => void }) {
-    const { activeCompetition, updateCompetition } = useStore();
+    const { activeCompetition, updateScoringConfig } = useStore();
 
     const [minStr, setMinStr] = useState(String(activeCompetition?.scoreMin ?? 0));
     const [maxStr, setMaxStr] = useState(String(activeCompetition?.scoreMax ?? 10));
     const [stepStr, setStepStr] = useState(String(activeCompetition?.scoreStep ?? 1));
+    const [starStep, setStarStep] = useState(activeCompetition?.scoreStep === 0.5 ? '0.5' : '1');
     const [unit, setUnit] = useState(activeCompetition?.scoreUnit || '');
     const [mode, setMode] = useState<Competition['scoringMode']>(activeCompetition?.scoringMode || 'numeric');
 
@@ -19,7 +20,9 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
         const scoreMax = parseFloat(maxStr);
         const scoreStep = parseFloat(stepStr);
 
-        if (isNaN(scoreMin) || isNaN(scoreMax) || isNaN(scoreStep)) {
+        const finalStep = mode === 'stars' ? parseFloat(starStep) : scoreStep;
+
+        if (isNaN(scoreMin) || isNaN(scoreMax) || isNaN(finalStep)) {
             alert('Min, Max, and Step must be valid numbers.');
             return;
         }
@@ -29,24 +32,23 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
             return;
         }
 
-        if (scoreStep <= 0) {
+        if (finalStep <= 0) {
             alert('Step must be strictly positive.');
             return;
         }
 
-        if (mode === 'stars' && (scoreMax - scoreMin) / scoreStep > 10) {
+        if (mode === 'stars' && (scoreMax - scoreMin) / finalStep > 10) {
             alert('Stars mode is only recommended for ranges with 10 or fewer steps. Please use slider or numeric.');
-            // Just a warning, let's strictly enforce the user's requirement "Only valid if (scoreMax - scoreMin) <= 10"
             if (scoreMax - scoreMin > 10) {
                 alert('Stars mode is only valid if (max - min) <= 10.');
                 return;
             }
         }
 
-        await updateCompetition(activeCompetition.id, {
+        await updateScoringConfig(activeCompetition.id, {
             scoreMin,
             scoreMax,
-            scoreStep,
+            scoreStep: finalStep,
             scoreUnit: unit.trim() || undefined,
             scoringMode: mode
         });
@@ -88,7 +90,14 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
                         </div>
                         <div style={{ width: '80px' }}>
                             <label style={{ display: 'block', fontSize: '13px', color: 'var(--muted)', marginBottom: '4px' }}>Step</label>
-                            <input className="input" type="number" step="any" required value={stepStr} onChange={e => setStepStr(e.target.value)} style={{ width: '100%' }} />
+                            {mode === 'stars' ? (
+                                <select className="input" value={starStep} onChange={e => setStarStep(e.target.value)} style={{ width: '100%', cursor: 'pointer', background: 'var(--bg)', padding: '5px' }}>
+                                    <option value="1">Full</option>
+                                    <option value="0.5">Half</option>
+                                </select>
+                            ) : (
+                                <input className="input" type="number" step="any" required value={stepStr} onChange={e => setStepStr(e.target.value)} style={{ width: '100%' }} />
+                            )}
                         </div>
                     </div>
 
