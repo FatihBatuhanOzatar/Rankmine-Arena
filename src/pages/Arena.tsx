@@ -16,9 +16,17 @@ export default function Arena() {
     const [showRounds, setShowRounds] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+    const [showTip, setShowTip] = useState(() => !localStorage.getItem('arenaTipsSeen'));
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleStr, setTitleStr] = useState('');
+
+    const [isCompact, setIsCompact] = useState(() => localStorage.getItem('rm_compact_mode') === 'true');
+
+    const dismissTip = () => {
+        localStorage.setItem('arenaTipsSeen', 'true');
+        setShowTip(false);
+    };
 
     useEffect(() => {
         if (id) {
@@ -95,6 +103,18 @@ export default function Arena() {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        className="btn"
+                        onClick={() => {
+                            const next = !isCompact;
+                            setIsCompact(next);
+                            localStorage.setItem('rm_compact_mode', String(next));
+                        }}
+                        title="Toggle Compact Columns"
+                        style={{ padding: '0 12px', fontSize: '16px' }}
+                    >
+                        🗜️
+                    </button>
                     <button className="btn" onClick={() => setShowSaveTemplate(true)}>Save as Template</button>
                     <button className="btn" onClick={() => setShowContestants(true)}>Manage Contestants</button>
                     <button className="btn" onClick={() => setShowRounds(true)}>Manage Rounds</button>
@@ -113,9 +133,17 @@ export default function Arena() {
             {showSettings && <ManageSettings onClose={() => setShowSettings(false)} />}
 
             {/* Main Layout */}
-            <main style={{ flex: 1, display: 'flex', padding: '24px', overflow: 'hidden', gap: '24px' }}>
-                <Leaderboard />
-                <ScoreTable />
+            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', gap: '24px' }}>
+                {showTip && (
+                    <div style={{ padding: '12px 16px', background: 'var(--cyan)', color: '#000', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span><strong>Tip:</strong> Use arrow keys to navigate. Drag row/column headers to reorder.</span>
+                        <button onClick={dismissTip} style={{ padding: '4px 12px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#000', fontWeight: 'bold' }}>Got it</button>
+                    </div>
+                )}
+                <div style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '24px' }}>
+                    <Leaderboard />
+                    <ScoreTable isCompact={isCompact} />
+                </div>
             </main>
         </div>
     );

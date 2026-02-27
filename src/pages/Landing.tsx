@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function Landing() {
     const navigate = useNavigate();
-    const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate } = useStore();
+    const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate, createGridCompetition } = useStore();
 
     useEffect(() => {
         loadCompetitions();
@@ -157,6 +157,26 @@ export default function Landing() {
                 <h3 style={{ margin: 0 }}>Import Backup</h3>
                 <input type="file" accept=".json" onChange={handleImport} style={{ color: 'var(--text)', background: 'transparent' }} />
             </div>
+
+            {import.meta.env.DEV && (
+                <div className="card" style={{ marginTop: '40px', borderColor: 'var(--amber)', borderStyle: 'dashed' }}>
+                    <h3 style={{ margin: '0 0 16px 0', color: 'var(--amber)' }}>🛠 Dev Tools (Stress Testing)</h3>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        <button className="btn" onClick={async () => {
+                            const id = await createGridCompetition(50);
+                            navigate(`/arena/${id}`);
+                        }}>
+                            Generate 50x50 Grid
+                        </button>
+                        <button className="btn" onClick={async () => {
+                            const id = await createGridCompetition(100);
+                            navigate(`/arena/${id}`);
+                        }}>
+                            Generate 100x100 Grid
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={!!confirmDelete}
