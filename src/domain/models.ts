@@ -17,6 +17,7 @@ export interface Contestant {
     id: string;
     competitionId: string;
     name: string;
+    orderIndex?: number;
     accentColor?: string;               // hex
     createdAt: number;
 }

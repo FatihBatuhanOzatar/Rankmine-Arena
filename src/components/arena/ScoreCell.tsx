@@ -32,45 +32,83 @@ export const ScoreCell = memo(function ScoreCell({
     const [modalOpen, setModalOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [draftValue, setDraftValue] = useState('');
+
     const val = entry?.score ?? '';
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let parsed: number | undefined = undefined;
-        if (e.target.value !== '') {
-            parsed = parseInt(e.target.value, 10);
-            if (isNaN(parsed)) return;
-            if (parsed > max) parsed = max;
-            if (parsed < min) parsed = min;
+    const commit = useCallback(() => {
+        if (!isEditing) return;
+        setIsEditing(false);
+
+        const trimmed = draftValue.trim();
+        if (trimmed === '') {
+            if (val !== '') upsertEntry(roundId, contestantId, undefined);
+            return;
         }
-        upsertEntry(roundId, contestantId, parsed);
+
+        let parsed = parseFloat(trimmed);
+        if (isNaN(parsed)) return;
+
+        if (parsed > max) parsed = max;
+        if (parsed < min) parsed = min;
+
+        parsed = Math.round(parsed / step) * step;
+        parsed = parseFloat(parsed.toFixed(5));
+
+        if (parsed !== val) {
+            upsertEntry(roundId, contestantId, parsed);
+        }
+    }, [isEditing, draftValue, upsertEntry, roundId, contestantId, max, min, step, val]);
+
+    const handleFocus = () => {
+        setIsEditing(true);
+        setDraftValue(val !== '' ? String(val) : '');
+    };
+
+    const handleBlur = () => {
+        commit();
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDraftValue(e.target.value);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        // Arrow Key Navigation
+        if (e.key === 'Escape') {
+            setIsEditing(false);
+            inputRef.current?.blur();
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+            inputRef.current?.blur();
+            return;
+        }
+
         if (e.key === 'ArrowUp') {
             e.preventDefault();
+            commit();
             onNavigate(-1, 0);
         } else if (e.key === 'ArrowDown') {
             e.preventDefault();
+            commit();
             onNavigate(1, 0);
         } else if (e.key === 'ArrowLeft') {
-            // Only navigate if at start of input
             if (inputRef.current && inputRef.current.selectionStart === 0) {
                 e.preventDefault();
+                commit();
                 onNavigate(0, -1);
             }
         } else if (e.key === 'ArrowRight') {
-            // Only navigate if at end of input
-            if (inputRef.current && inputRef.current.selectionStart === String(val).length) {
+            const len = (isEditing ? draftValue : String(val)).length;
+            if (inputRef.current && inputRef.current.selectionStart === len) {
                 e.preventDefault();
+                commit();
                 onNavigate(0, 1);
             }
-        } else if (e.key === 'Enter') {
-            // Option 1: move down
-            e.preventDefault();
-            onNavigate(1, 0);
-        } else if (e.key === 'Escape') {
-            inputRef.current?.blur();
         }
     };
 
@@ -95,13 +133,13 @@ export const ScoreCell = memo(function ScoreCell({
                 <input
                     ref={inputRef}
                     id={`cell-${rowIdx}-${colIdx}`}
-                    type="number"
-                    value={val}
+                    type="text"
+                    inputMode="decimal"
+                    value={isEditing ? draftValue : val}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    min={min}
-                    max={max}
-                    step={step}
                     className="input cell-input"
                     style={{
                         width: '100%',

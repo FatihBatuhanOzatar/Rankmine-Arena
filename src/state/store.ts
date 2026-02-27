@@ -37,11 +37,13 @@ export interface ArenaState {
     addContestant: (name: string) => Promise<void>;
     renameContestant: (id: string, name: string) => Promise<void>;
     removeContestant: (id: string) => Promise<void>;
+    reorderContestants: (fromIndex: number, toIndex: number) => Promise<void>;
 
     // --- Round Management ---
     addRound: (title: string) => Promise<void>;
     renameRound: (id: string, title: string) => Promise<void>;
     removeRound: (id: string) => Promise<void>;
+    reorderRounds: (fromIndex: number, toIndex: number) => Promise<void>;
 
     // --- Assets ---
     saveAsset: (blob: Blob) => Promise<string>;
@@ -296,9 +298,21 @@ export const useStore = create<ArenaState>((set, get) => ({
             entriesById[entry.id] = entry;
         }
 
+        // Migration: Add orderIndex to contestants if missing
+        let cModified = false;
+        c.forEach((cont, idx) => {
+            if (cont.orderIndex === undefined) {
+                cont.orderIndex = idx;
+                cModified = true;
+            }
+        });
+        if (cModified) {
+            await repos.saveContestants(c);
+        }
+
         set({
             activeCompetition: active,
-            contestants: c,
+            contestants: c.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
             rounds: r.sort((a, b) => a.orderIndex - b.orderIndex),
             entriesById,
             pendingEntryWrites: {}
@@ -360,10 +374,12 @@ export const useStore = create<ArenaState>((set, get) => ({
         if (!activeCompetition) return;
 
         const compId = activeCompetition.id;
+        const orderIndex = contestants.length > 0 ? Math.max(...contestants.map(c => c.orderIndex ?? 0)) + 1 : 0;
         const newContestant: Contestant = {
             id: crypto.randomUUID(),
             competitionId: compId,
             name,
+            orderIndex,
             createdAt: Date.now()
         };
 
@@ -425,6 +441,17 @@ export const useStore = create<ArenaState>((set, get) => ({
             contestants: contestants.filter(c => c.id !== id),
             entriesById: newEntriesById
         });
+    },
+
+    reorderContestants: async (fromIndex: number, toIndex: number) => {
+        const { contestants } = get();
+        const clone = [...contestants];
+        const [moved] = clone.splice(fromIndex, 1);
+        clone.splice(toIndex, 0, moved);
+
+        const updated = clone.map((c, i) => ({ ...c, orderIndex: i }));
+        await repos.saveContestants(updated);
+        set({ contestants: updated });
     },
 
     // --- Round Management ---
@@ -501,6 +528,17 @@ export const useStore = create<ArenaState>((set, get) => ({
             rounds: rounds.filter(r => r.id !== id),
             entriesById: newEntriesById
         });
+    },
+
+    reorderRounds: async (fromIndex: number, toIndex: number) => {
+        const { rounds } = get();
+        const clone = [...rounds];
+        const [moved] = clone.splice(fromIndex, 1);
+        clone.splice(toIndex, 0, moved);
+
+        const updated = clone.map((r, i) => ({ ...r, orderIndex: i }));
+        await repos.saveRounds(updated);
+        set({ rounds: updated });
     },
 
     // --- Assets ---

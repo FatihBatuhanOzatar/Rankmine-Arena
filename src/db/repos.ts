@@ -95,6 +95,17 @@ export async function listContestants(competitionId: string): Promise<Contestant
     return db.getAllFromIndex('contestants', 'competitionId', competitionId);
 }
 
+export async function saveContestants(contestants: Contestant[]): Promise<void> {
+    if (contestants.length === 0) return;
+    const db = await getDB();
+    const tx = db.transaction(['contestants', 'competitions'], 'readwrite');
+    for (const c of contestants) {
+        await tx.objectStore('contestants').put(c);
+    }
+    await touchCompetitionInTx(tx, contestants[contestants.length - 1].competitionId);
+    await tx.done;
+}
+
 export async function saveContestant(c: Contestant): Promise<void> {
     const db = await getDB();
     await db.put('contestants', c);
@@ -132,6 +143,17 @@ export async function listRounds(competitionId: string): Promise<Round[]> {
         [competitionId, 0],
         [competitionId, Number.MAX_SAFE_INTEGER]
     ));
+}
+
+export async function saveRounds(rounds: Round[]): Promise<void> {
+    if (rounds.length === 0) return;
+    const db = await getDB();
+    const tx = db.transaction(['rounds', 'competitions'], 'readwrite');
+    for (const r of rounds) {
+        await tx.objectStore('rounds').put(r);
+    }
+    await touchCompetitionInTx(tx, rounds[rounds.length - 1].competitionId);
+    await tx.done;
 }
 
 export async function saveRound(r: Round): Promise<void> {
