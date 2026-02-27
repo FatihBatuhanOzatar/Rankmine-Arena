@@ -2,6 +2,8 @@ import { memo, useCallback, useState, useRef } from 'react';
 import { useStore } from '../../state/store';
 import { EntryModal } from './EntryModal';
 
+const DEBUG_RENDER = import.meta.env.DEV && false; // Toggle to true to debug renders
+
 interface ScoreCellProps {
     roundId: string;
     contestantId: string;
@@ -36,6 +38,10 @@ export const ScoreCell = memo(function ScoreCell({
     const [draftValue, setDraftValue] = useState('');
 
     const val = entry?.score ?? '';
+
+    if (DEBUG_RENDER) {
+        console.log(`Render cell [${rowIdx}, ${colIdx}] with val [${val}]`);
+    }
 
     const commit = useCallback(() => {
         if (!isEditing) return;
@@ -77,6 +83,7 @@ export const ScoreCell = memo(function ScoreCell({
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Escape') {
             setIsEditing(false);
+            setDraftValue(val !== '' ? String(val) : ''); // Revert local state visually
             inputRef.current?.blur();
             return;
         }
@@ -113,11 +120,21 @@ export const ScoreCell = memo(function ScoreCell({
     };
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let parsed = parseFloat(e.target.value);
-        if (isNaN(parsed)) return;
-        if (parsed > max) parsed = max;
-        if (parsed < min) parsed = min;
-        upsertEntry(roundId, contestantId, parsed);
+        setDraftValue(e.target.value);
+    };
+
+    const handleSliderPointerDown = () => {
+        setIsEditing(true);
+        setDraftValue(val !== '' ? String(val) : String(min));
+    };
+
+    const handleSliderPointerUp = () => {
+        // We need to commit using the current draftValue, but pointerUp
+        // might fire slightly before state updates sometimes depending on React?
+        // Actually, commit uses isEditing and draftValue, it's safe to just commit.
+        // But to be sure we commit the latest, we'll let commit close the edit loop.
+        // Wait, commit() has draftValue in deps.
+        commit();
     };
 
     const handleStarClick = (value: number) => {
@@ -157,7 +174,9 @@ export const ScoreCell = memo(function ScoreCell({
 
             {mode === 'slider' && (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8px', gap: '4px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{val === '' ? '-' : val}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                        {isEditing ? draftValue : (val === '' ? '-' : val)}
+                    </span>
                     <input
                         ref={inputRef}
                         id={`cell-${rowIdx}-${colIdx}`}
@@ -165,8 +184,11 @@ export const ScoreCell = memo(function ScoreCell({
                         min={min}
                         max={max}
                         step={step}
-                        value={val === '' ? min : val}
+                        value={isEditing ? draftValue : (val === '' ? min : val)}
                         onChange={handleSliderChange}
+                        onPointerDown={handleSliderPointerDown}
+                        onPointerUp={handleSliderPointerUp}
+                        onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
                         style={{ width: '100%', cursor: 'pointer' }}
                     />

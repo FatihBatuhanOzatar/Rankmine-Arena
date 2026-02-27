@@ -18,6 +18,7 @@ export interface ArenaState {
     deleteTemplate: (id: string) => Promise<void>;
     updateCompetition: (id: string, partial: Partial<Competition>) => Promise<void>;
     updateScoringConfig: (id: string, config: Pick<Competition, 'scoreMin' | 'scoreMax' | 'scoreStep' | 'scoringMode' | 'scoreUnit'>) => Promise<void>;
+    createGridCompetition: (size: number) => Promise<string>;
 
     // --- Arena State ---
     activeCompetition: Competition | null;
@@ -199,6 +200,65 @@ export const useStore = create<ArenaState>((set, get) => ({
         for (const c of contestants) await repos.saveContestant(c);
         for (const r of rounds) await repos.saveRound(r);
         return competition.id;
+    },
+
+    createGridCompetition: async (size: number) => {
+        const compId = crypto.randomUUID();
+        const now = Date.now();
+        const newComp: Competition = {
+            id: compId,
+            title: `Stress Test ${size}x${size}`,
+            scoreMin: 0,
+            scoreMax: 10,
+            scoreStep: 1,
+            scoringMode: 'slider',
+            createdAt: now,
+            updatedAt: now,
+            ui: { theme: 'neoArcade', density: 'comfortable' }
+        };
+
+        await repos.saveCompetition(newComp);
+
+        const newContestants: Contestant[] = Array.from({ length: size }).map((_, i) => ({
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            name: `Contestant ${i + 1}`,
+            orderIndex: i,
+            createdAt: now
+        }));
+
+        const newRounds: Round[] = Array.from({ length: size }).map((_, i) => ({
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            title: `Round ${i + 1}`,
+            orderIndex: i,
+            createdAt: now
+        }));
+
+        await repos.saveContestants(newContestants);
+        await repos.saveRounds(newRounds);
+
+        const newEntries: Entry[] = [];
+        for (const r of newRounds) {
+            for (const c of newContestants) {
+                newEntries.push({
+                    id: makeEntryId(compId, r.id, c.id),
+                    competitionId: compId,
+                    roundId: r.id,
+                    contestantId: c.id,
+                    score: undefined,
+                    updatedAt: now
+                });
+            }
+        }
+
+        const batchSize = 1000;
+        for (let i = 0; i < newEntries.length; i += batchSize) {
+            await repos.saveEntries(newEntries.slice(i, i + batchSize));
+        }
+
+        await get().loadCompetitions();
+        return compId;
     },
 
     deleteCompetition: async (id: string) => {

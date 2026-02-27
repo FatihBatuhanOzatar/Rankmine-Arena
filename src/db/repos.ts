@@ -115,7 +115,7 @@ export async function saveContestant(c: Contestant): Promise<void> {
 
 export async function deleteContestant(id: string): Promise<void> {
     const db = await getDB();
-    const tx = db.transaction(['contestants', 'entries', 'competitions'], 'readwrite');
+    const tx = db.transaction(['contestants', 'entries', 'competitions', 'assets', 'assetMeta'], 'readwrite');
 
     const c = await tx.objectStore('contestants').get(id);
     if (!c) return;
@@ -127,6 +127,11 @@ export async function deleteContestant(id: string): Promise<void> {
     const entriesIndex = tx.objectStore('entries').index('contestantId');
     let cursor = await entriesIndex.openCursor(IDBKeyRange.only(id));
     while (cursor) {
+        const entry = cursor.value;
+        if (entry.assetId) {
+            await tx.objectStore('assets').delete(entry.assetId);
+            await tx.objectStore('assetMeta').delete(entry.assetId);
+        }
         await cursor.delete();
         cursor = await cursor.continue();
     }
@@ -164,7 +169,7 @@ export async function saveRound(r: Round): Promise<void> {
 
 export async function deleteRound(id: string): Promise<void> {
     const db = await getDB();
-    const tx = db.transaction(['rounds', 'entries', 'competitions'], 'readwrite');
+    const tx = db.transaction(['rounds', 'entries', 'competitions', 'assets', 'assetMeta'], 'readwrite');
 
     const r = await tx.objectStore('rounds').get(id);
     if (!r) return;
@@ -176,6 +181,11 @@ export async function deleteRound(id: string): Promise<void> {
     const entriesIndex = tx.objectStore('entries').index('roundId');
     let cursor = await entriesIndex.openCursor(IDBKeyRange.only(id));
     while (cursor) {
+        const entry = cursor.value;
+        if (entry.assetId) {
+            await tx.objectStore('assets').delete(entry.assetId);
+            await tx.objectStore('assetMeta').delete(entry.assetId);
+        }
         await cursor.delete();
         cursor = await cursor.continue();
     }
