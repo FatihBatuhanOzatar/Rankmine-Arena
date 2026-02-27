@@ -53,3 +53,21 @@ export interface AssetMeta {
     sizeBytes: number;
     createdAt: number;
 }
+
+export interface ScoringConfig {
+    scoreMin: number;
+    scoreMax: number;
+    scoreStep: number;
+    scoreUnit?: string;
+    scoringMode: 'numeric' | 'slider' | 'stars';
+}
+
+export interface Template {
+    id: string;
+    name: string;
+    createdAt: number;
+    updatedAt: number;
+    scoring: ScoringConfig;
+    contestants: { name: string }[];
+    rounds: { title: string; orderIndex: number }[];
+}

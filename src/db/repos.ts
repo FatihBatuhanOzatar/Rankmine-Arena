@@ -1,5 +1,26 @@
 import { getDB } from './idb';
-import type { Competition, Contestant, Round, Entry } from '../domain';
+import type { Competition, Contestant, Round, Entry, Template } from '../domain';
+
+// --- Templates ---
+export async function saveTemplate(t: Template): Promise<void> {
+    const db = await getDB();
+    await db.put('templates', t);
+}
+
+export async function listTemplates(): Promise<Template[]> {
+    const db = await getDB();
+    return db.getAllFromIndex('templates', 'updatedAt');
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+    const db = await getDB();
+    await db.delete('templates', id);
+}
+
+export async function getTemplate(id: string): Promise<Template | undefined> {
+    const db = await getDB();
+    return db.get('templates', id);
+}
 
 // --- Competitions ---
 export async function listCompetitions(): Promise<Competition[]> {

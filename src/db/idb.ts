@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
-import type { Competition, Contestant, Round, Entry, Asset, AssetMeta } from '../domain';
+import type { Competition, Contestant, Round, Entry, Asset, AssetMeta, Template } from '../domain';
 
 export interface RankmineDB extends DBSchema {
     competitions: {
@@ -40,13 +40,18 @@ export interface RankmineDB extends DBSchema {
         value: AssetMeta;
         indexes: { competitionId: string };
     };
+    templates: {
+        key: string;
+        value: Template;
+        indexes: { updatedAt: number };
+    };
 }
 
 let dbPromise: Promise<IDBPDatabase<RankmineDB>> | null = null;
 
 export async function getDB(): Promise<IDBPDatabase<RankmineDB>> {
     if (!dbPromise) {
-        dbPromise = openDB<RankmineDB>('rankmine-arena', 1, {
+        dbPromise = openDB<RankmineDB>('rankmine-arena', 2, {
             upgrade(db) {
                 // Competitions
                 if (!db.objectStoreNames.contains('competitions')) {
@@ -85,6 +90,12 @@ export async function getDB(): Promise<IDBPDatabase<RankmineDB>> {
                 if (!db.objectStoreNames.contains('assetMeta')) {
                     const store = db.createObjectStore('assetMeta', { keyPath: 'id' });
                     store.createIndex('competitionId', 'competitionId');
+                }
+
+                // Templates
+                if (!db.objectStoreNames.contains('templates')) {
+                    const store = db.createObjectStore('templates', { keyPath: 'id' });
+                    store.createIndex('updatedAt', 'updatedAt');
                 }
             },
         });
