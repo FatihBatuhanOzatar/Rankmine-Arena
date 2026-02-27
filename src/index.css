@@ -1,13 +1,18 @@
 /* src/index.css */
 :root {
-  /* Neo-Arcade default tokens */
+  /* Neo-Arcade default tokens — warm amber palette */
   --bg: #070A0F;
   --panel: rgba(255, 255, 255, 0.06);
   --panel2: rgba(255, 255, 255, 0.03);
-  --text: #D7E1FF;
-  --muted: rgba(215, 225, 255, 0.70);
-  --line: rgba(120, 220, 255, 0.18);
-  --cyan: #57E3FF;
+  --text: #E8E2D6;
+  --fg: #E8E2D6;
+  --muted: rgba(232, 226, 214, 0.60);
+  --line: rgba(201, 162, 39, 0.18);
+  --border: rgba(201, 162, 39, 0.18);
+  --accent: #C9A227;
+  --accent-glow: rgba(201, 162, 39, 0.35);
+  --accent-dim: rgba(201, 162, 39, 0.10);
+  --accent-text: #F0D45E;
   --magenta: #FF4FD8;
   --good: #47FF9A;
   --bad: #FF5A7A;
@@ -19,8 +24,9 @@
 [data-theme="calm"] {
   --bg: #0B1020;
   --panel: rgba(255, 255, 255, 0.07);
-  --text: #E9ECFF;
-  --cyan: #7AA7FF;
+  --text: #E8E2D6;
+  --accent: #B8963E;
+  --accent-glow: rgba(184, 150, 62, 0.30);
   --magenta: #B69CFF;
 }
 
@@ -29,12 +35,12 @@ body {
   padding: 0;
   background-color: var(--bg);
   background-image:
-    /* Radial glows */
-    radial-gradient(ellipse at 20% 0%, rgba(87, 227, 255, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 0%, rgba(255, 79, 216, 0.08) 0%, transparent 60%),
+    /* Radial glows — warm amber tones */
+    radial-gradient(ellipse at 20% 0%, rgba(201, 162, 39, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 0%, rgba(255, 79, 216, 0.06) 0%, transparent 60%),
     /* Grid lines */
-    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(120, 220, 255, 0.06) 47px, rgba(120, 220, 255, 0.06) 48px),
-    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(120, 220, 255, 0.06) 47px, rgba(120, 220, 255, 0.06) 48px);
+    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(201, 162, 39, 0.05) 47px, rgba(201, 162, 39, 0.05) 48px),
+    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(201, 162, 39, 0.05) 47px, rgba(201, 162, 39, 0.05) 48px);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
@@ -48,7 +54,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   background: repeating-linear-gradient(0deg, transparent 0px, transparent 10px,
-      rgba(120, 220, 255, 0.04) 10px, rgba(120, 220, 255, 0.04) 12px);
+      rgba(201, 162, 39, 0.03) 10px, rgba(201, 162, 39, 0.03) 12px);
   z-index: 10;
 }
 
@@ -68,6 +74,6 @@ body::after {
 }
 
 a {
-  color: var(--cyan);
+  color: var(--accent-text);
   text-decoration: none;
 }

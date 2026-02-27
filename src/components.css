@@ -30,13 +30,13 @@
 
 .btn:hover {
     background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 12px rgba(87, 227, 255, 0.3);
+    box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .btnPrimary {
-    background: rgba(87, 227, 255, 0.1);
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent-text);
     font-weight: 600;
     border-radius: var(--radius-btn);
     cursor: pointer;
@@ -47,7 +47,7 @@
 }
 
 .btnPrimary:hover {
-    box-shadow: 0 0 20px rgba(87, 227, 255, 0.4);
+    box-shadow: 0 0 20px var(--accent-glow);
 }
 
 .input {
@@ -62,7 +62,7 @@
 
 .input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--cyan);
+    box-shadow: 0 0 0 2px var(--accent);
 }
 
 .chip {
@@ -106,10 +106,10 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--cyan);
+    background: var(--accent);
 }
 
 .recent-battle-card:hover {
-    box-shadow: 0 0 12px rgba(87, 227, 255, 0.15);
+    box-shadow: 0 0 12px var(--accent-glow);
     transform: translateY(-1px);
 }

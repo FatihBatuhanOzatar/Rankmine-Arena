@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
 import { ScoreTable } from '../components/arena/ScoreTable';
+import { GalleryView } from '../components/arena/GalleryView';
 import { ManageContestants } from '../components/arena/ManageContestants';
 import { ManageRounds } from '../components/arena/ManageRounds';
 import { ManageSettings } from '../components/arena/ManageSettings';
@@ -22,6 +23,31 @@ export default function Arena() {
     const [titleStr, setTitleStr] = useState('');
 
     const [isCompact, setIsCompact] = useState(() => localStorage.getItem('rm_compact_mode') === 'true');
+    const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid');
+
+    const handleGalleryNavigate = useCallback((rowIdx: number, colIdx: number) => {
+        setViewMode('grid');
+        // Wait for Grid to render, then scroll + highlight
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                const cellId = `cell-${rowIdx}-${colIdx}`;
+                const el = document.getElementById(cellId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    // Brief highlight pulse
+                    const td = el.closest('td');
+                    if (td) {
+                        td.style.transition = 'box-shadow 0.3s';
+                        td.style.boxShadow = '0 0 0 3px var(--accent), inset 0 0 20px var(--accent-glow)';
+                        setTimeout(() => {
+                            td.style.boxShadow = '';
+                            setTimeout(() => { td.style.transition = ''; }, 350);
+                        }, 1200);
+                    }
+                }
+            }, 80);
+        });
+    }, []);
 
     const dismissTip = () => {
         localStorage.setItem('arenaTipsSeen', 'true');
@@ -103,6 +129,32 @@ export default function Arena() {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* View Mode Toggle */}
+                    <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <button
+                            className="btn"
+                            onClick={() => setViewMode('grid')}
+                            style={{
+                                borderRadius: 0, border: 'none',
+                                background: viewMode === 'grid' ? 'var(--accent)' : 'transparent',
+                                color: viewMode === 'grid' ? '#000' : 'var(--text)',
+                                fontWeight: viewMode === 'grid' ? 700 : 400,
+                                padding: '0 14px', fontSize: '13px',
+                            }}
+                        >Grid</button>
+                        <button
+                            className="btn"
+                            onClick={() => setViewMode('gallery')}
+                            style={{
+                                borderRadius: 0, border: 'none', borderLeft: '1px solid var(--border)',
+                                background: viewMode === 'gallery' ? 'var(--accent)' : 'transparent',
+                                color: viewMode === 'gallery' ? '#000' : 'var(--text)',
+                                fontWeight: viewMode === 'gallery' ? 700 : 400,
+                                padding: '0 14px', fontSize: '13px',
+                            }}
+                        >Gallery</button>
+                    </div>
+
                     <button
                         className="btn"
                         onClick={() => {
@@ -135,14 +187,20 @@ export default function Arena() {
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', gap: '24px' }}>
                 {showTip && (
-                    <div style={{ padding: '12px 16px', background: 'var(--cyan)', color: '#000', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '12px 16px', background: 'var(--accent)', color: '#000', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span><strong>Tip:</strong> Use arrow keys to navigate. Drag row/column headers to reorder.</span>
                         <button onClick={dismissTip} style={{ padding: '4px 12px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#000', fontWeight: 'bold' }}>Got it</button>
                     </div>
                 )}
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '24px' }}>
-                    <Leaderboard />
-                    <ScoreTable isCompact={isCompact} />
+                    {viewMode === 'grid' ? (
+                        <>
+                            <Leaderboard />
+                            <ScoreTable isCompact={isCompact} />
+                        </>
+                    ) : (
+                        <GalleryView onNavigateToCell={handleGalleryNavigate} />
+                    )}
                 </div>
             </main>
         </div>
