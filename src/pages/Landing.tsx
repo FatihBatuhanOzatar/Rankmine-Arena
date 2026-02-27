@@ -6,11 +6,12 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function Landing() {
     const navigate = useNavigate();
-    const { competitions, loadCompetitions, createCompetition, createFromTemplate, deleteCompetition } = useStore();
+    const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate } = useStore();
 
     useEffect(() => {
         loadCompetitions();
-    }, [loadCompetitions]);
+        loadTemplates();
+    }, [loadCompetitions, loadTemplates]);
 
     const handleCreateEmpty = async () => {
         const id = await createCompetition('New Competition');
@@ -22,8 +23,8 @@ export default function Landing() {
         navigate(`/arena/${id}`);
     };
 
-    const handleDelete = (id: string, title: string) => {
-        setConfirmDelete({ id, title });
+    const handleDelete = (type: 'competition' | 'template', id: string, title: string) => {
+        setConfirmDelete({ type, id, title });
     };
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,11 +40,15 @@ export default function Landing() {
         }
     };
 
-    const [confirmDelete, setConfirmDelete] = useState<{ id: string, title: string } | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<{ type: 'competition' | 'template', id: string, title: string } | null>(null);
 
     const handleDeleteConfirm = async () => {
         if (confirmDelete) {
-            await deleteCompetition(confirmDelete.id);
+            if (confirmDelete.type === 'competition') {
+                await deleteCompetition(confirmDelete.id);
+            } else {
+                await deleteTemplate(confirmDelete.id);
+            }
             setConfirmDelete(null);
         }
     };
@@ -63,6 +68,50 @@ export default function Landing() {
                     <button className="btn" onClick={handleLoadTemplate}>Load Template</button>
                 </div>
             </div>
+
+            {templates.length > 0 && (
+                <>
+                    <h2>Templates</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
+                        {templates.map(t => (
+                            <div
+                                key={t.id}
+                                className="card recent-battle-card"
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                                onClick={async () => {
+                                    const newId = await createCompetitionFromTemplate(t.id);
+                                    navigate(`/arena/${newId}`);
+                                }}
+                                tabIndex={0}
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        const newId = await createCompetitionFromTemplate(t.id);
+                                        navigate(`/arena/${newId}`);
+                                    }
+                                }}
+                            >
+                                <div>
+                                    <h3 style={{ margin: '0 0 4px 0' }}>{t.name}</h3>
+                                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Format Template • Updated: {new Date(t.updatedAt).toLocaleDateString()}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className="btn"
+                                        style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete('template', t.id, t.name);
+                                        }}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
 
             <h2>Recent Battles</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
@@ -93,7 +142,7 @@ export default function Landing() {
                                     style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDelete(c.id, c.title);
+                                        handleDelete('competition', c.id, c.title);
                                     }}
                                 >
                                     Delete
@@ -111,7 +160,7 @@ export default function Landing() {
 
             <ConfirmDialog
                 isOpen={!!confirmDelete}
-                title="Delete competition?"
+                title={`Delete ${confirmDelete?.type}?`}
                 body={<>This will permanently remove <strong>{confirmDelete?.title}</strong> and all its local data.</>}
                 confirmLabel="Delete"
                 onConfirm={handleDeleteConfirm}

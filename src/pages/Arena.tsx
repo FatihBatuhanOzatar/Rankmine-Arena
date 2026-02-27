@@ -6,6 +6,7 @@ import { ScoreTable } from '../components/arena/ScoreTable';
 import { ManageContestants } from '../components/arena/ManageContestants';
 import { ManageRounds } from '../components/arena/ManageRounds';
 import { ManageSettings } from '../components/arena/ManageSettings';
+import { SaveTemplateModal } from '../components/arena/SaveTemplateModal';
 import { exportCompetition } from '../io';
 
 export default function Arena() {
@@ -14,6 +15,7 @@ export default function Arena() {
     const [showContestants, setShowContestants] = useState(false);
     const [showRounds, setShowRounds] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleStr, setTitleStr] = useState('');
@@ -93,6 +95,7 @@ export default function Arena() {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn" onClick={() => setShowSaveTemplate(true)}>Save as Template</button>
                     <button className="btn" onClick={() => setShowContestants(true)}>Manage Contestants</button>
                     <button className="btn" onClick={() => setShowRounds(true)}>Manage Rounds</button>
                     <button className="btn" onClick={async () => {
@@ -104,6 +107,7 @@ export default function Arena() {
             </header>
 
             {/* Modals */}
+            {showSaveTemplate && <SaveTemplateModal onClose={() => setShowSaveTemplate(false)} />}
             {showContestants && <ManageContestants onClose={() => setShowContestants(false)} />}
             {showRounds && <ManageRounds onClose={() => setShowRounds(false)} />}
             {showSettings && <ManageSettings onClose={() => setShowSettings(false)} />}
