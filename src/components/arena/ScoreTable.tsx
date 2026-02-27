@@ -193,6 +193,8 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                                         rowIdx={rIdx}
                                         colIdx={cIdx}
                                         onNavigate={(rowDelta, colDelta) => handleNavigate(rIdx, cIdx, rowDelta, colDelta)}
+                                        contestantName={c.name}
+                                        roundTitle={r.title}
                                     />
                                 )
                             })}

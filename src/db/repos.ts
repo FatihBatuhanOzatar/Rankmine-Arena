@@ -233,8 +233,17 @@ async function touchCompetitionInTx(tx: any, id: string) {
     }
 }
 
+// --- AI Compatibility Helper ---
+export async function getEntryAssetBlob(entryId: string): Promise<Blob | null> {
+    const db = await getDB();
+    const entry = await db.get('entries', entryId);
+    if (!entry?.assetId) return null;
+    const asset = await db.get('assets', entry.assetId);
+    return asset?.blob ?? null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function hydrateCompetition(c: any): Competition {
+export function hydrateCompetition(c: any): Competition {
     if (c.scoring !== undefined) {
         c.scoreMin = c.scoring.min ?? 0;
         c.scoreMax = c.scoring.max ?? 10;

@@ -15,6 +15,8 @@ interface ScoreCellProps {
     rowIdx: number;
     colIdx: number;
     onNavigate: (rowDelta: number, colDelta: number) => void;
+    contestantName?: string;
+    roundTitle?: string;
 }
 
 export const ScoreCell = memo(function ScoreCell({
@@ -27,7 +29,9 @@ export const ScoreCell = memo(function ScoreCell({
     mode,
     rowIdx,
     colIdx,
-    onNavigate
+    onNavigate,
+    contestantName,
+    roundTitle
 }: ScoreCellProps) {
     const entry = useStore(useCallback(s => s.entriesById[entryId], [entryId]));
     const upsertEntry = useStore(s => s.upsertEntry);
@@ -259,26 +263,84 @@ export const ScoreCell = memo(function ScoreCell({
                 );
             })()}
 
-            {/* Details Trigger */}
+            {/* Attachment Chip — integrated top-right */}
             <div
-                onClick={() => setModalOpen(true)}
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); setModalOpen(true); }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setModalOpen(true);
+                    }
+                }}
                 style={{
                     position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '4px',
-                    background: hasImage ? 'var(--cyan)' : (hasNotesOrLink ? 'var(--muted)' : 'transparent'),
-                    border: hasImage || hasNotesOrLink ? 'none' : '1px solid var(--border)',
+                    top: 3,
+                    right: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '5px',
+                    background: hasImage
+                        ? 'var(--accent-dim)'
+                        : 'rgba(255,255,255,0.04)',
+                    border: hasImage
+                        ? '1px solid var(--accent)'
+                        : '1px solid rgba(255,255,255,0.10)',
                     cursor: 'pointer',
-                    opacity: 0.5,
-                    transition: 'opacity 0.2s'
+                    opacity: hasImage ? 0.9 : (hasNotesOrLink ? 0.6 : 0.38),
+                    transition: 'opacity 0.15s, background 0.15s, box-shadow 0.15s',
                 }}
-                title="Open Details/Image"
-                onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '0.5'}
-            />
+                title={hasImage ? 'View Image' : (hasNotesOrLink ? 'View Details' : 'Add Details')}
+                onMouseEnter={e => {
+                    e.currentTarget.style.opacity = '1';
+                    if (hasImage) e.currentTarget.style.boxShadow = '0 0 6px var(--accent-glow)';
+                }}
+                onMouseLeave={e => {
+                    e.currentTarget.style.opacity = hasImage ? '0.9' : (hasNotesOrLink ? '0.6' : '0.38');
+                    e.currentTarget.style.boxShadow = '';
+                }}
+                onFocus={e => {
+                    e.currentTarget.style.opacity = '1';
+                    e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent)';
+                }}
+                onBlur={e => {
+                    e.currentTarget.style.opacity = hasImage ? '0.9' : (hasNotesOrLink ? '0.6' : '0.38');
+                    e.currentTarget.style.boxShadow = '';
+                }}
+            >
+                {/* Tiny icon indicator */}
+                <svg viewBox="0 0 16 16" width="10" height="10" style={{
+                    fill: 'none',
+                    stroke: hasImage ? 'var(--accent-text)' : (hasNotesOrLink ? 'var(--muted)' : 'rgba(255,255,255,0.30)'),
+                    strokeWidth: 1.5,
+                    strokeLinecap: 'round' as const,
+                    strokeLinejoin: 'round' as const,
+                }}>
+                    {hasImage ? (
+                        /* Camera icon for image */
+                        <>
+                            <rect x="1" y="4" width="14" height="10" rx="2" />
+                            <circle cx="8" cy="9" r="2.5" />
+                            <path d="M5 4L6 2h4l1 2" />
+                        </>
+                    ) : (
+                        /* Dot grid for empty / notes-only */
+                        <>
+                            <circle cx="4" cy="5" r="1" fill="currentColor" stroke="none" />
+                            <circle cx="8" cy="5" r="1" fill="currentColor" stroke="none" />
+                            <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none" />
+                            <circle cx="4" cy="11" r="1" fill="currentColor" stroke="none" />
+                            <circle cx="8" cy="11" r="1" fill="currentColor" stroke="none" />
+                            <circle cx="12" cy="11" r="1" fill="currentColor" stroke="none" />
+                        </>
+                    )}
+                </svg>
+            </div>
 
             {modalOpen && (
                 <EntryModal
@@ -289,6 +351,8 @@ export const ScoreCell = memo(function ScoreCell({
                     min={min}
                     max={max}
                     step={step}
+                    contestantName={contestantName}
+                    roundTitle={roundTitle}
                 />
             )}
         </td>
