@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Competition, Contestant, Round, Entry } from '../domain';
+import type { Competition, Contestant, Round, Entry, Template } from '../domain';
 import { makeEntryId } from '../domain';
 import * as repos from '../db/repos';
 import { getDB } from '../db/idb';
@@ -8,10 +8,14 @@ import { createAITemplateCombo } from '../templates/ai-image-models-battle';
 export interface ArenaState {
     // --- Landing State ---
     competitions: Competition[];
+    templates: Template[];
     loadCompetitions: () => Promise<void>;
+    loadTemplates: () => Promise<void>;
     createCompetition: (title: string) => Promise<string>;
     createFromTemplate: () => Promise<string>;
+    createCompetitionFromTemplate: (templateId: string) => Promise<string>;
     deleteCompetition: (id: string) => Promise<void>;
+    deleteTemplate: (id: string) => Promise<void>;
     updateCompetition: (id: string, partial: Partial<Competition>) => Promise<void>;
     updateScoringConfig: (id: string, config: Pick<Competition, 'scoreMin' | 'scoreMax' | 'scoreStep' | 'scoringMode' | 'scoreUnit'>) => Promise<void>;
 
@@ -23,6 +27,7 @@ export interface ArenaState {
 
     loadArena: (competitionId: string) => Promise<void>;
     unloadArena: () => void;
+    addTemplateFromCompetition: (name: string) => Promise<void>;
 
     // --- Mutations ---
     upsertEntry: (roundId: string, contestantId: string, score: number | undefined) => void;
@@ -53,6 +58,7 @@ let flushTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 export const useStore = create<ArenaState>((set, get) => ({
     competitions: [],
+    templates: [],
     activeCompetition: null,
     contestants: [],
     rounds: [],
@@ -63,6 +69,108 @@ export const useStore = create<ArenaState>((set, get) => ({
     loadCompetitions: async () => {
         const list = await repos.listCompetitions();
         set({ competitions: list.sort((a, b) => b.updatedAt - a.updatedAt) });
+    },
+
+    loadTemplates: async () => {
+        const list = await repos.listTemplates();
+        set({ templates: list.sort((a, b) => b.updatedAt - a.updatedAt) });
+    },
+
+    addTemplateFromCompetition: async (name: string) => {
+        const { activeCompetition, contestants, rounds } = get();
+        if (!activeCompetition) return;
+
+        const now = Date.now();
+        const newTemplate: Template = {
+            id: crypto.randomUUID(),
+            name,
+            createdAt: now,
+            updatedAt: now,
+            scoring: {
+                scoreMin: activeCompetition.scoreMin,
+                scoreMax: activeCompetition.scoreMax,
+                scoreStep: activeCompetition.scoreStep,
+                scoreUnit: activeCompetition.scoreUnit,
+                scoringMode: activeCompetition.scoringMode
+            },
+            contestants: contestants.map(c => ({ name: c.name })),
+            rounds: rounds.slice().sort((a, b) => a.orderIndex - b.orderIndex).map(r => ({ title: r.title, orderIndex: r.orderIndex }))
+        };
+
+        await repos.saveTemplate(newTemplate);
+        await get().loadTemplates();
+    },
+
+    deleteTemplate: async (id: string) => {
+        await repos.deleteTemplate(id);
+        await get().loadTemplates();
+    },
+
+    createCompetitionFromTemplate: async (templateId: string) => {
+        const t = await repos.getTemplate(templateId);
+        if (!t) throw new Error("Template not found");
+
+        const compId = crypto.randomUUID();
+        const now = Date.now();
+
+        const newComp: Competition = {
+            id: compId,
+            title: t.name,
+            scoreMin: t.scoring.scoreMin,
+            scoreMax: t.scoring.scoreMax,
+            scoreStep: t.scoring.scoreStep,
+            scoreUnit: t.scoring.scoreUnit,
+            scoringMode: t.scoring.scoringMode,
+            createdAt: now,
+            updatedAt: now,
+            ui: { theme: 'neoArcade', density: 'comfortable' }
+        };
+
+        await repos.saveCompetition(newComp);
+
+        const newContestants: Contestant[] = t.contestants.map(c => ({
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            name: c.name,
+            createdAt: now
+        }));
+
+        for (const c of newContestants) {
+            await repos.saveContestant(c);
+        }
+
+        const newRounds: Round[] = t.rounds.map(r => ({
+            id: crypto.randomUUID(),
+            competitionId: compId,
+            title: r.title,
+            orderIndex: r.orderIndex,
+            createdAt: now
+        }));
+
+        for (const r of newRounds) {
+            await repos.saveRound(r);
+        }
+
+        const newEntries: Entry[] = [];
+        for (const r of newRounds) {
+            for (const c of newContestants) {
+                newEntries.push({
+                    id: makeEntryId(compId, r.id, c.id),
+                    competitionId: compId,
+                    roundId: r.id,
+                    contestantId: c.id,
+                    score: undefined,
+                    updatedAt: now
+                });
+            }
+        }
+
+        if (newEntries.length > 0) {
+            await repos.saveEntries(newEntries);
+        }
+
+        await get().loadCompetitions();
+        return compId;
     },
 
     createCompetition: async (title: string) => {
