@@ -97,8 +97,7 @@ export default function Landing() {
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
-                                        className="btn"
-                                        style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
+                                        className="btn-danger"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDelete('template', t.id, t.name);
@@ -138,8 +137,7 @@ export default function Landing() {
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
-                                    className="btn"
-                                    style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
+                                    className="btn-danger"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleDelete('competition', c.id, c.title);
