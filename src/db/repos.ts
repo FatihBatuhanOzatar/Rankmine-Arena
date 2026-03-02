@@ -257,5 +257,9 @@ export function hydrateCompetition(c: any): Competition {
         c.scoreStep = c.scoreStep ?? 1;
         c.scoringMode = c.scoringMode ?? 'numeric';
     }
+    // Phase 4: backward-safe lock state migration
+    if (c.locked === undefined) {
+        c.locked = false;
+    }
     return c as Competition;
 }

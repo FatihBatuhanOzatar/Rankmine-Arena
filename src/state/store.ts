@@ -29,6 +29,7 @@ export interface ArenaState {
     loadArena: (competitionId: string) => Promise<void>;
     unloadArena: () => void;
     addTemplateFromCompetition: (name: string) => Promise<void>;
+    toggleLock: () => Promise<void>;
 
     // --- Mutations ---
     upsertEntry: (roundId: string, contestantId: string, score: number | undefined) => void;
@@ -388,6 +389,13 @@ export const useStore = create<ArenaState>((set, get) => ({
             entriesById: {},
             pendingEntryWrites: {}
         });
+    },
+
+    toggleLock: async () => {
+        const { activeCompetition } = get();
+        if (!activeCompetition) return;
+        const newLocked = !activeCompetition.locked;
+        await get().updateCompetition(activeCompetition.id, { locked: newLocked });
     },
 
     // --- Mutation ---
