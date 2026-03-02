@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import logoUrl from '../../assets/rankminelogo.png';
+import logoUrlDark from '../../assets/rankminelogo.png';
+import logoUrlLight from '../../assets/rankminelogo_dark.png';
 
 interface AppHeaderProps {
     theme: string;
@@ -25,9 +26,9 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
             backdropFilter: 'blur(10px)',
             transition: 'height 0.2s ease'
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', color: 'inherit' }}>
-                    <img src={logoUrl} alt="Rankmine Logo" style={{ height: isArena ? '162px' : '192px', width: 'auto', transition: 'height 0.2s ease' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', height: '100%' }}>
+                <Link to="/" className="logo-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>
+                    <img src={theme === 'light' ? logoUrlLight : logoUrlDark} alt="Rankmine Logo" style={{ height: isArena ? '162px' : '192px', width: 'auto', transition: 'height 0.2s ease' }} />
                     {!isArena && <span style={{ fontWeight: 600, fontSize: '1.25rem', letterSpacing: '0.5px' }}></span>}
                 </Link>
             </div>
@@ -37,7 +38,7 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
                     <Link to="/" className="btn" style={{ padding: '4px 12px', fontSize: '14px' }}>← Back to Landing</Link>
                 ) : (
                     <button className="btn" onClick={onToggleTheme} title="Toggle Theme">
-                        {theme === 'neoArcade' ? '🔮 Neo-Arcade' : '☁️ Calm'}
+                        {theme === 'neoArcade' ? '🔮 Neo-Arcade' : '☀️ Light'}
                     </button>
                 )}
             </div>

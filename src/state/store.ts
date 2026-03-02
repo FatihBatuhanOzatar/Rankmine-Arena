@@ -43,6 +43,7 @@ export interface ArenaState {
 
     // --- Round Management ---
     addRound: (title: string) => Promise<void>;
+    updateRound: (id: string, partial: Partial<Round>) => Promise<void>;
     renameRound: (id: string, title: string) => Promise<void>;
     removeRound: (id: string) => Promise<void>;
     reorderRounds: (fromIndex: number, toIndex: number) => Promise<void>;
@@ -127,7 +128,8 @@ export const useStore = create<ArenaState>((set, get) => ({
             scoringMode: t.scoring.scoringMode,
             createdAt: now,
             updatedAt: now,
-            ui: { theme: 'neoArcade', density: 'comfortable' }
+            ui: { theme: 'neoArcade', density: 'comfortable' },
+            isWeighted: false
         };
 
         await repos.saveCompetition(newComp);
@@ -148,6 +150,7 @@ export const useStore = create<ArenaState>((set, get) => ({
             competitionId: compId,
             title: r.title,
             orderIndex: r.orderIndex,
+            weight: 1,
             createdAt: now
         }));
 
@@ -190,6 +193,7 @@ export const useStore = create<ArenaState>((set, get) => ({
             createdAt: now,
             updatedAt: now,
             ui: { theme: 'neoArcade', density: 'comfortable' },
+            isWeighted: false
         };
         await repos.saveCompetition(c);
         return id;
@@ -215,7 +219,8 @@ export const useStore = create<ArenaState>((set, get) => ({
             scoringMode: 'slider',
             createdAt: now,
             updatedAt: now,
-            ui: { theme: 'neoArcade', density: 'comfortable' }
+            ui: { theme: 'neoArcade', density: 'comfortable' },
+            isWeighted: false
         };
 
         await repos.saveCompetition(newComp);
@@ -233,6 +238,7 @@ export const useStore = create<ArenaState>((set, get) => ({
             competitionId: compId,
             title: `Round ${i + 1}`,
             orderIndex: i,
+            weight: 1,
             createdAt: now
         }));
 
@@ -348,6 +354,15 @@ export const useStore = create<ArenaState>((set, get) => ({
             return;
         }
 
+        let isCompModified = false;
+        if (active.isWeighted === undefined) {
+            active.isWeighted = false;
+            isCompModified = true;
+        }
+        if (isCompModified) {
+            await repos.saveCompetition(active);
+        }
+
         const [c, r, e] = await Promise.all([
             repos.listContestants(id),
             repos.listRounds(id),
@@ -369,6 +384,17 @@ export const useStore = create<ArenaState>((set, get) => ({
         });
         if (cModified) {
             await repos.saveContestants(c);
+        }
+
+        let rModified = false;
+        r.forEach((rnd) => {
+            if (rnd.weight === undefined) {
+                rnd.weight = 1;
+                rModified = true;
+            }
+        });
+        if (rModified) {
+            await repos.saveRounds(r);
         }
 
         set({
@@ -535,6 +561,7 @@ export const useStore = create<ArenaState>((set, get) => ({
             competitionId: compId,
             title,
             orderIndex,
+            weight: 1,
             createdAt: Date.now()
         };
 
@@ -566,11 +593,15 @@ export const useStore = create<ArenaState>((set, get) => ({
     },
 
     renameRound: async (id: string, title: string) => {
+        get().updateRound(id, { title });
+    },
+
+    updateRound: async (id: string, partial: Partial<Round>) => {
         const { rounds } = get();
         const existing = rounds.find(r => r.id === id);
         if (!existing) return;
 
-        const updated = { ...existing, title };
+        const updated = { ...existing, ...partial };
         await repos.saveRound(updated);
 
         set({

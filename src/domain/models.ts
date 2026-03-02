@@ -10,8 +10,9 @@ export interface Competition {
 
     createdAt: number;                   // Date.now()
     updatedAt: number;
-    ui: { theme: 'neoArcade' | 'calm'; density: 'comfortable' | 'compact' };
+    ui: { theme: 'neoArcade' | 'calm' | 'light'; density: 'comfortable' | 'compact' };
     locked?: boolean;                    // Phase 4: Score Locking (default false)
+    isWeighted?: boolean;                // Phase 4 Extension: Optional weighted rounds (default false)
 }
 
 export interface Contestant {
@@ -28,6 +29,7 @@ export interface Round {
     competitionId: string;
     title: string;
     orderIndex: number;
+    weight?: number;                     // Phase 4 Extension: Round weight (default 1)
     createdAt: number;
 }
 

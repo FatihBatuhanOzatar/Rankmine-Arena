@@ -49,6 +49,7 @@ export interface ContestantSummary {
     roundsWon: number;
     averageScore: number;
     totalScore: number;
+    weightedTotal: number;
 }
 
 export interface ArenaSummary {
@@ -67,17 +68,23 @@ export interface ArenaSummary {
 export function computeArenaSummary(
     contestants: Contestant[],
     entries: Entry[],
-    totalRounds: number,
-    roundWinners: Map<string, string[]>
+    rounds: Round[],
+    roundWinners: Map<string, string[]>,
+    isWeighted: boolean = false
 ): ArenaSummary {
     if (contestants.length === 0) {
         return { overallWinner: null, contestantStats: [], isTied: false };
     }
 
     // Build per-contestant aggregation
-    const statsMap = new Map<string, { total: number; count: number; roundsWon: number }>();
+    const statsMap = new Map<string, { total: number; weightedTotal: number; count: number; roundsWon: number }>();
     for (const c of contestants) {
-        statsMap.set(c.id, { total: 0, count: 0, roundsWon: 0 });
+        statsMap.set(c.id, { total: 0, weightedTotal: 0, count: 0, roundsWon: 0 });
+    }
+
+    const roundWeightMap = new Map<string, number>();
+    for (const r of rounds) {
+        roundWeightMap.set(r.id, r.weight ?? 1);
     }
 
     // Accumulate scores
@@ -85,7 +92,9 @@ export function computeArenaSummary(
         const stats = statsMap.get(entry.contestantId);
         if (!stats) continue;
         if (entry.score !== undefined) {
+            const w = roundWeightMap.get(entry.roundId) ?? 1;
             stats.total += entry.score;
+            stats.weightedTotal += entry.score * w;
             stats.count += 1;
         }
     }
@@ -98,7 +107,6 @@ export function computeArenaSummary(
         }
     }
 
-    // Build summary rows
     const contestantStats: ContestantSummary[] = contestants.map(c => {
         const s = statsMap.get(c.id)!;
         return {
@@ -106,24 +114,26 @@ export function computeArenaSummary(
             contestantName: c.name,
             roundsWon: s.roundsWon,
             averageScore: s.count > 0 ? parseFloat((s.total / s.count).toFixed(2)) : 0,
-            totalScore: s.total,
+            totalScore: parseFloat(s.total.toFixed(2)),
+            weightedTotal: parseFloat(s.weightedTotal.toFixed(2)),
         };
     });
 
-    // Sort by totalScore desc to find winner
-    const sorted = [...contestantStats].sort((a, b) => b.totalScore - a.totalScore);
+    // Sort by selected score type to find winner
+    const scoreKey = isWeighted ? 'weightedTotal' : 'totalScore';
+    const sorted = [...contestantStats].sort((a, b) => b[scoreKey] - a[scoreKey]);
 
-    const topScore = sorted[0]?.totalScore ?? 0;
-    const hasAnyScores = sorted.some(s => s.totalScore > 0 || contestantStats.some(cs => {
+    const topScore = sorted[0]?.[scoreKey] ?? 0;
+    const hasAnyScores = sorted.some(s => s[scoreKey] > 0 || contestantStats.some(cs => {
         const m = statsMap.get(cs.contestantId);
         return m && m.count > 0;
     }));
 
-    if (!hasAnyScores && totalRounds === 0) {
+    if (!hasAnyScores && rounds.length === 0) {
         return { overallWinner: null, contestantStats, isTied: false };
     }
 
-    const tiedAtTop = sorted.filter(s => s.totalScore === topScore);
+    const tiedAtTop = sorted.filter(s => s[scoreKey] === topScore);
     const isTied = tiedAtTop.length > 1 && topScore >= 0 && sorted.some(s => statsMap.get(s.contestantId)!.count > 0);
 
     const overallWinner = sorted.length > 0 && statsMap.get(sorted[0].contestantId)!.count > 0

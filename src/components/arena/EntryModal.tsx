@@ -159,7 +159,7 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max, st
                             minHeight: '300px',
                             maxHeight: '55vh',
                             background: 'var(--bg)',
-                            borderRadius: '8px',
+                            borderRadius: '4px',
                             border: '1px solid var(--border)',
                             display: 'flex',
                             justifyContent: 'center',
@@ -181,9 +181,9 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max, st
                             {!isImageLoading && !imageObjUrl && entry?.assetId && (
                                 <div style={{
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                                    color: 'var(--bad)', padding: '24px', textAlign: 'center'
+                                    color: 'var(--danger)', padding: '24px', textAlign: 'center'
                                 }}>
-                                    <svg viewBox="0 0 24 24" width="32" height="32" style={{ fill: 'none', stroke: 'var(--bad)', strokeWidth: 1.5 }}>
+                                    <svg viewBox="0 0 24 24" width="32" height="32" style={{ fill: 'none', stroke: 'var(--danger)', strokeWidth: 1.5 }}>
                                         <rect x="2" y="4" width="20" height="16" rx="3" />
                                         <line x1="2" y1="4" x2="22" y2="20" />
                                     </svg>
@@ -250,8 +250,7 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max, st
                                 </button>
                                 {entry?.assetId && (
                                     <button
-                                        className="btn"
-                                        style={{ fontSize: '13px', borderColor: 'var(--bad)', color: 'var(--bad)' }}
+                                        className="btn-danger"
                                         onClick={handleRemoveImage}
                                     >
                                         🗑 Remove Image

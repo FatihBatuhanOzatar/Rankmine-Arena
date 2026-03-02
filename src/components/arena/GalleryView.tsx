@@ -133,7 +133,7 @@ export function GalleryView({ onNavigateToCell }: GalleryViewProps) {
                             onClick={() => onNavigateToCell(tile.rowIdx, tile.colIdx)}
                             style={{
                                 background: 'var(--panel)',
-                                borderRadius: '10px',
+                                borderRadius: '4px',
                                 border: '1px solid var(--border)',
                                 overflow: 'hidden',
                                 cursor: 'pointer',

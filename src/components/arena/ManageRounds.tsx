@@ -70,7 +70,7 @@ export function ManageRounds({ onClose }: { onClose: () => void }) {
                                     }}
                                     style={{ flex: 1 }}
                                 />
-                                <button className="btn" style={{ borderColor: 'var(--bad)', color: 'var(--bad)' }} onClick={() => handleDelete(r.id, r.title)}>
+                                <button className="btn-danger" onClick={() => handleDelete(r.id, r.title)}>
                                     Delete
                                 </button>
                             </div>

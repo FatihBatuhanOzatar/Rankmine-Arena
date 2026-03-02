@@ -141,7 +141,7 @@ export default function Arena() {
                             fontFamily: 'monospace',
                             border: '1px solid var(--border)',
                             padding: '2px 8px',
-                            borderRadius: '12px',
+                            borderRadius: 'var(--radius-card)',
                             fontSize: '12px',
                             cursor: locked ? 'default' : 'pointer',
                             opacity: locked ? 0.5 : 1,
@@ -152,7 +152,7 @@ export default function Arena() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {/* View Mode Toggle */}
-                    <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                         <button
                             className="btn"
                             onClick={() => setViewMode('grid')}
@@ -178,7 +178,7 @@ export default function Arena() {
                     </div>
 
                     {/* Reveal Mode Toggle */}
-                    <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                         <button
                             className="btn"
                             onClick={() => handleRevealModeChange('live')}
@@ -264,7 +264,7 @@ export default function Arena() {
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', gap: '24px' }}>
                 {showTip && (
-                    <div style={{ padding: '12px 16px', background: 'var(--accent)', color: '#000', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '12px 16px', background: 'var(--accent)', color: '#000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span><strong>Tip:</strong> Use arrow keys to navigate. Drag row/column headers to reorder.</span>
                         <button onClick={dismissTip} style={{ padding: '4px 12px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#000', fontWeight: 'bold' }}>Got it</button>
                     </div>

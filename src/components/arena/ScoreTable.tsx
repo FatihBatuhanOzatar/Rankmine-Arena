@@ -3,6 +3,57 @@ import { useStore } from '../../state/store';
 import { ScoreCell } from './ScoreCell';
 import { makeEntryId, computeRoundWinners } from '../../domain';
 
+function WeightEditor({ roundId, weight, locked }: { roundId: string, weight: number, locked?: boolean }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const updateRound = useStore(s => s.updateRound);
+
+    if (locked) return <span style={{ marginLeft: '8px', color: 'var(--muted)', fontSize: '11px' }}>×{weight.toFixed(1)}</span>;
+
+    return (
+        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: '8px' }}>
+            <span
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                style={{ color: 'var(--muted)', fontSize: '11px', cursor: 'pointer' }}
+            >
+                ×{weight.toFixed(1)}
+            </span>
+            {isOpen && (
+                <div
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                        position: 'absolute', top: '100%', left: 0, marginTop: '4px',
+                        background: 'var(--panel-elevated)', border: '1px solid var(--border)',
+                        padding: '4px', borderRadius: '4px', zIndex: 50,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                >
+                    <input
+                        type="number" step="0.1" min="0"
+                        defaultValue={weight}
+                        onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0) {
+                                updateRound(roundId, { weight: val });
+                            }
+                            setIsOpen(false);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                            } else if (e.key === 'Escape') {
+                                setIsOpen(false);
+                            }
+                        }}
+                        autoFocus
+                        style={{ width: '60px', padding: '2px 4px', fontSize: '12px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                    />
+                </div>
+            )}
+        </span>
+    );
+}
+
 interface ScoreTableProps {
     isCompact?: boolean;
     locked?: boolean;
@@ -89,7 +140,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
     const { scoreMin: min, scoreMax: max, scoreStep: step, scoringMode: mode } = activeCompetition;
 
     return (
-        <div className={`score-table-wrapper ${isCompact ? 'grid--compact' : ''}`} style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)', ...{ '--drag-accent': 'rgba(201, 162, 39, 0.75)' } } as React.CSSProperties}>
+        <div className={`score-table-wrapper ${isCompact ? 'grid--compact' : ''}`} style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg)', ...{ '--drag-accent': 'rgba(201, 162, 39, 0.75)' } } as React.CSSProperties}>
             <style>
                 {`
                 .score-table {
@@ -188,6 +239,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
                                 }}
                             >
                                 {r.title}
+                                {activeCompetition.isWeighted && <WeightEditor roundId={r.id} weight={r.weight ?? 1} locked={locked} />}
                             </td>
                             {contestants.map((c, cIdx) => {
                                 const entryId = makeEntryId(activeCompetition.id, r.id, c.id);

@@ -65,7 +65,7 @@ describe('computeRoundWinners', () => {
 
 describe('computeArenaSummary', () => {
     it('returns null winner for empty data', () => {
-        const result = computeArenaSummary([], [], 0, new Map());
+        const result = computeArenaSummary([], [], [], new Map());
         expect(result.overallWinner).toBeNull();
         expect(result.contestantStats).toEqual([]);
         expect(result.isTied).toBe(false);
@@ -83,7 +83,7 @@ describe('computeArenaSummary', () => {
 
         const roundWinners = new Map([['r1', ['c1']], ['r2', ['c1']]]);
 
-        const result = computeArenaSummary(contestants, entries, 2, roundWinners);
+        const result = computeArenaSummary(contestants, entries, rounds, roundWinners);
         expect(result.overallWinner?.contestantId).toBe('c1');
         expect(result.overallWinner?.totalScore).toBe(18);
         expect(result.isTied).toBe(false);
@@ -97,7 +97,7 @@ describe('computeArenaSummary', () => {
 
         const roundWinners = new Map([['r1', ['c1', 'c2']]]);
 
-        const result = computeArenaSummary(contestants, entries, 1, roundWinners);
+        const result = computeArenaSummary(contestants, entries, rounds.slice(0, 1), roundWinners);
         expect(result.isTied).toBe(true);
     });
 
@@ -111,7 +111,7 @@ describe('computeArenaSummary', () => {
 
         const roundWinners = new Map([['r1', ['c1']], ['r2', ['c2']]]);
 
-        const result = computeArenaSummary(contestants, entries, 2, roundWinners);
+        const result = computeArenaSummary(contestants, entries, rounds, roundWinners);
 
         const c1Stats = result.contestantStats.find(s => s.contestantId === 'c1')!;
         const c2Stats = result.contestantStats.find(s => s.contestantId === 'c2')!;

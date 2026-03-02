@@ -21,8 +21,8 @@ export const ArenaSummary = memo(function ArenaSummary() {
     );
 
     const summary = useMemo(
-        () => computeArenaSummary(contestants, entries, rounds.length, roundWinners),
-        [contestants, entries, rounds.length, roundWinners]
+        () => computeArenaSummary(contestants, entries, rounds, roundWinners, activeCompetition?.isWeighted ?? false),
+        [contestants, entries, rounds, roundWinners, activeCompetition?.isWeighted]
     );
 
     if (contestants.length === 0) return null;
@@ -53,7 +53,7 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                 🏆 {summary.overallWinner.contestantName}
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                                {summary.overallWinner.totalScore} pts
+                                {activeCompetition?.isWeighted ? summary.overallWinner.weightedTotal : summary.overallWinner.totalScore} pts
                             </div>
                         </div>
                     ) : (
@@ -70,7 +70,9 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                     <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 500 }}>Name</th>
                                     <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 500 }}>Wins</th>
                                     <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 500 }}>Avg</th>
-                                    <th style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 500 }}>Total</th>
+                                    <th style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 500 }}>
+                                        {activeCompetition?.isWeighted ? 'W. Total' : 'Total'}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -79,7 +81,7 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                         key={cs.contestantId}
                                         style={{
                                             borderBottom: '1px solid var(--border)',
-                                            opacity: cs.totalScore > 0 || cs.averageScore > 0 ? 1 : 0.5
+                                            opacity: (activeCompetition?.isWeighted ? cs.weightedTotal : cs.totalScore) > 0 || cs.averageScore > 0 ? 1 : 0.5
                                         }}
                                     >
                                         <td style={{
@@ -98,7 +100,7 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                             {cs.averageScore}
                                         </td>
                                         <td style={{ padding: '5px 6px', textAlign: 'right', fontWeight: 600, color: 'var(--accent-text)' }}>
-                                            {cs.totalScore}
+                                            {activeCompetition?.isWeighted ? cs.weightedTotal : cs.totalScore}
                                         </td>
                                     </tr>
                                 ))}

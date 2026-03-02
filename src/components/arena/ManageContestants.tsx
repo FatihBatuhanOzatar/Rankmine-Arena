@@ -70,7 +70,7 @@ export function ManageContestants({ onClose }: { onClose: () => void }) {
                                     }}
                                     style={{ flex: 1 }}
                                 />
-                                <button className="btn" style={{ borderColor: 'var(--bad)', color: 'var(--bad)' }} onClick={() => handleDelete(c.id, c.name)}>
+                                <button className="btn-danger" onClick={() => handleDelete(c.id, c.name)}>
                                     Delete
                                 </button>
                             </div>

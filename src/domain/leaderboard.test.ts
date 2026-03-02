@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeLeaderboard } from './leaderboard';
-import type { Contestant, Entry } from './models';
+import type { Contestant, Entry, Round } from './models';
 
 describe('computeLeaderboard', () => {
     const c1: Contestant = { id: '1', competitionId: 'c1', name: 'A', createdAt: 100 };
@@ -10,14 +10,15 @@ describe('computeLeaderboard', () => {
     const contestants = [c3, c2, c1]; // Out of order on purpose
 
     it('handles empty entries gracefully', () => {
-        const rows = computeLeaderboard(contestants, [], 5);
+        const rounds: Round[] = Array.from({ length: 5 }).map((_, i) => ({ id: `r${i}`, competitionId: 'c1', title: `R${i}`, orderIndex: i, createdAt: 0 }));
+        const rows = computeLeaderboard(contestants, [], rounds);
         expect(rows).toHaveLength(3);
         // Tie-breaker is createdAt ASC, so 100 -> 200 -> 300
         expect(rows[0].contestant.id).toBe('1');
         expect(rows[1].contestant.id).toBe('2');
         expect(rows[2].contestant.id).toBe('3');
 
-        expect(rows[0].totalScore).toBe(0);
+        expect(rows[0].displayScore).toBe(0);
         expect(rows[0].scoredRoundsCount).toBe(0);
     });
 
@@ -28,7 +29,8 @@ describe('computeLeaderboard', () => {
             { id: '3', competitionId: 'c1', roundId: 'r1', contestantId: '2', score: 20, updatedAt: 0 },
         ];
 
-        const rows = computeLeaderboard(contestants, entries, 2);
+        const rounds: Round[] = [{ id: 'r1', competitionId: 'c1', title: 'R1', orderIndex: 0, createdAt: 0 }, { id: 'r2', competitionId: 'c1', title: 'R2', orderIndex: 1, createdAt: 0 }];
+        const rows = computeLeaderboard(contestants, entries, rounds);
         expect(rows[0].contestant.id).toBe('2'); // 20 points
         expect(rows[1].contestant.id).toBe('1'); // 15 points
         expect(rows[2].contestant.id).toBe('3'); // 0 points
@@ -40,7 +42,8 @@ describe('computeLeaderboard', () => {
             { id: '2', competitionId: 'c1', roundId: 'r1', contestantId: '2', score: 0, updatedAt: 0 },
         ];
 
-        const rows = computeLeaderboard(contestants, entries, 1);
+        const rounds: Round[] = [{ id: 'r1', competitionId: 'c1', title: 'R1', orderIndex: 0, createdAt: 0 }];
+        const rows = computeLeaderboard(contestants, entries, rounds);
 
         // c2 has 0 score, 1 rounds count
         // c1 has 0 score, 0 rounds count
@@ -58,7 +61,8 @@ describe('computeLeaderboard', () => {
             { id: '3', competitionId: 'c1', roundId: 'r1', contestantId: '1', score: 10, updatedAt: 0 }, // 10 total, 1 count
         ];
 
-        const rows = computeLeaderboard(contestants, entries, 2);
+        const rounds: Round[] = [{ id: 'r1', competitionId: 'c1', title: 'R1', orderIndex: 0, createdAt: 0 }, { id: 'r2', competitionId: 'c1', title: 'R2', orderIndex: 1, createdAt: 0 }];
+        const rows = computeLeaderboard(contestants, entries, rounds);
         // 3 has 10 points over 2 rounds
         // 1 has 10 points over 1 round
         expect(rows[0].contestant.id).toBe('3');
@@ -72,7 +76,8 @@ describe('computeLeaderboard', () => {
             { id: '2', competitionId: 'c1', roundId: 'r1', contestantId: '1', score: 10, updatedAt: 0 },
         ];
 
-        const rows = computeLeaderboard(contestants, entries, 1);
+        const rounds: Round[] = [{ id: 'r1', competitionId: 'c1', title: 'R1', orderIndex: 0, createdAt: 0 }];
+        const rows = computeLeaderboard(contestants, entries, rounds);
 
         // same score (10), same count (1). createdAt ASC breaks tie
         // c1: 100, c3: 300

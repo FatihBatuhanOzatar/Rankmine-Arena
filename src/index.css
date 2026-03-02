@@ -1,33 +1,44 @@
 /* src/index.css */
 :root {
-  /* Neo-Arcade default tokens — warm amber palette */
-  --bg: #070A0F;
-  --panel: rgba(255, 255, 255, 0.06);
-  --panel2: rgba(255, 255, 255, 0.03);
-  --text: #E8E2D6;
-  --fg: #E8E2D6;
-  --muted: rgba(232, 226, 214, 0.60);
-  --line: rgba(201, 162, 39, 0.18);
-  --border: rgba(201, 162, 39, 0.18);
-  --accent: #C9A227;
-  --accent-glow: rgba(201, 162, 39, 0.35);
-  --accent-dim: rgba(201, 162, 39, 0.10);
+  /* Graphite battle palette */
+  --bg: #0f0f11;
+  --panel: #1b1b1f;
+  --panel-elevated: #1f1f24;
+  --panel2: #1f1f24;
+  --border: #2a2a30;
+  --line: #2a2a30;
+  --text: #e6e6e6;
+  --fg: #e6e6e6;
+  --muted: #9a9a9f;
+  --accent: #d4a017;
+  --accent-glow: rgba(212, 160, 23, 0.35);
+  --accent-dim: rgba(212, 160, 23, 0.10);
   --accent-text: #F0D45E;
   --magenta: #FF4FD8;
   --good: #47FF9A;
   --bad: #FF5A7A;
-  --radius-card: 12px;
-  --radius-btn: 10px;
-  --radius-input: 8px;
+  --danger: #b34747;
+  --dangerMuted: #7a2c2c;
+  --radius-card: 4px;
+  --radius-btn: 3px;
+  --radius-input: 3px;
 }
 
-[data-theme="calm"] {
-  --bg: #0B1020;
-  --panel: rgba(255, 255, 255, 0.07);
-  --text: #E8E2D6;
-  --accent: #B8963E;
-  --accent-glow: rgba(184, 150, 62, 0.30);
-  --magenta: #B69CFF;
+[data-theme="light"] {
+  --bg: #F4F1EA;
+  --panel: #EAE6DF;
+  --panel2: #E1DDD4;
+  --text: #2C2B29;
+  --fg: #2C2B29;
+  --muted: rgba(44, 43, 41, 0.60);
+  --line: #D0CCC3;
+  --border: #D0CCC3;
+  --accent: #C9A227;
+  --accent-glow: rgba(201, 162, 39, 0.25);
+  --accent-dim: rgba(201, 162, 39, 0.10);
+  --accent-text: #A6800C;
+  --danger: #B84654;
+  --dangerMuted: rgba(184, 70, 84, 0.15);
 }
 
 body {
@@ -35,12 +46,11 @@ body {
   padding: 0;
   background-color: var(--bg);
   background-image:
-    /* Radial glows — warm amber tones */
-    radial-gradient(ellipse at 20% 0%, rgba(201, 162, 39, 0.10) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 0%, rgba(255, 79, 216, 0.06) 0%, transparent 60%),
+    /* Radial glows — warm amber tones, no purple */
+    radial-gradient(ellipse at 20% 0%, rgba(212, 160, 23, 0.08) 0%, transparent 60%),
     /* Grid lines */
-    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(201, 162, 39, 0.05) 47px, rgba(201, 162, 39, 0.05) 48px),
-    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(201, 162, 39, 0.05) 47px, rgba(201, 162, 39, 0.05) 48px);
+    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(212, 160, 23, 0.05) 47px, rgba(212, 160, 23, 0.05) 48px),
+    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(212, 160, 23, 0.05) 47px, rgba(212, 160, 23, 0.05) 48px);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
@@ -54,7 +64,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   background: repeating-linear-gradient(0deg, transparent 0px, transparent 10px,
-      rgba(201, 162, 39, 0.03) 10px, rgba(201, 162, 39, 0.03) 12px);
+      rgba(212, 160, 23, 0.03) 10px, rgba(212, 160, 23, 0.03) 12px);
   z-index: 10;
 }
 

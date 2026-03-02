@@ -10,7 +10,7 @@ export function AppShell() {
     }, [theme]);
 
     const toggleTheme = () => {
-        setTheme(prev => prev === 'neoArcade' ? 'calm' : 'neoArcade');
+        setTheme(prev => prev === 'neoArcade' ? 'light' : 'neoArcade');
     };
 
     return (

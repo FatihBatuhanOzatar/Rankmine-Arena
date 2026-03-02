@@ -1,6 +1,7 @@
 import { memo, useMemo, useCallback, useRef } from 'react';
 import { useStore } from '../../state/store';
-import { computeLeaderboard } from '../../domain';
+import { computeLeaderboard, type RankingMode } from '../../domain';
+import { useState } from 'react';
 
 interface LeaderboardProps {
     revealMode: 'live' | 'reveal';
@@ -11,23 +12,37 @@ interface LeaderboardProps {
 export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, onReveal }: LeaderboardProps) {
     const contestants = useStore(s => s.contestants);
     const entriesById = useStore(s => s.entriesById);
-    const roundsLength = useStore(s => s.rounds.length);
+    const rounds = useStore(s => s.rounds);
+    const activeCompetition = useStore(s => s.activeCompetition);
+    const [rankingMode, setRankingMode] = useState<RankingMode>('total');
+    const [prevIsWeighted, setPrevIsWeighted] = useState(activeCompetition?.isWeighted);
+
+    if (activeCompetition?.isWeighted !== prevIsWeighted) {
+        setPrevIsWeighted(activeCompetition?.isWeighted);
+        if (activeCompetition?.isWeighted) {
+            if (rankingMode === 'total') setRankingMode('weighted-total');
+            if (rankingMode === 'average') setRankingMode('weighted-average');
+        } else {
+            if (rankingMode === 'weighted-total') setRankingMode('total');
+            if (rankingMode === 'weighted-average') setRankingMode('average');
+        }
+    }
 
     const derivedEntries = useMemo(() => Object.values(entriesById), [entriesById]);
 
     const sortedRows = useMemo(() => {
-        return computeLeaderboard(contestants, derivedEntries, roundsLength);
-    }, [contestants, derivedEntries, roundsLength]);
+        return computeLeaderboard(contestants, derivedEntries, rounds, rankingMode);
+    }, [contestants, derivedEntries, rounds, rankingMode]);
 
     // Unsorted: maintain contestant panel order
     const unsortedRows = useMemo(() => {
-        return computeLeaderboard(contestants, derivedEntries, roundsLength)
+        return computeLeaderboard(contestants, derivedEntries, rounds, rankingMode)
             .sort((a, b) => {
                 const aIdx = contestants.findIndex(c => c.id === a.contestant.id);
                 const bIdx = contestants.findIndex(c => c.id === b.contestant.id);
                 return aIdx - bIdx;
             });
-    }, [contestants, derivedEntries, roundsLength]);
+    }, [contestants, derivedEntries, rounds, rankingMode]);
 
     const isLive = revealMode === 'live';
     const showSorted = isLive || isRevealed;
@@ -88,7 +103,20 @@ export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, o
 
     return (
         <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', paddingRight: '16px' }}>
-            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.2rem' }}>Leaderboard</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Leaderboard</h2>
+                <select
+                    className="input"
+                    value={rankingMode}
+                    onChange={(e) => setRankingMode(e.target.value as RankingMode)}
+                    style={{ padding: '4px 8px', fontSize: '13px', width: 'auto' }}
+                >
+                    <option value="total">Total Score</option>
+                    <option value="average">Average Score</option>
+                    {activeCompetition?.isWeighted && <option value="weighted-total">Weighted Total</option>}
+                    {activeCompetition?.isWeighted && <option value="weighted-average">Weighted Average</option>}
+                </select>
+            </div>
 
             {/* Reveal mode: hidden overlay */}
             {revealMode === 'reveal' && !isRevealed && (
@@ -97,7 +125,7 @@ export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, o
                     textAlign: 'center',
                     background: 'var(--panel)',
                     border: '1px solid var(--border)',
-                    borderRadius: '8px',
+                    borderRadius: '4px',
                     marginBottom: '8px'
                 }}>
                     <div style={{ color: 'var(--muted)', marginBottom: '12px', fontSize: '14px', letterSpacing: '0.5px' }}>
@@ -154,7 +182,7 @@ export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, o
                             color: 'var(--accent)',
                             ...((!isLive && !isRevealed) ? { filter: 'blur(8px)', userSelect: 'none' as const } : {})
                         }}>
-                            {row.totalScore}
+                            {row.displayScore}
                         </div>
                     </div>
                 );

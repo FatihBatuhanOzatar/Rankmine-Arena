@@ -3,7 +3,9 @@ import { useStore } from '../../state/store';
 import type { Competition } from '../../domain';
 
 export function ManageSettings({ onClose }: { onClose: () => void }) {
-    const { activeCompetition, updateScoringConfig } = useStore();
+    const { activeCompetition, updateScoringConfig, updateCompetition } = useStore();
+
+    const [isWeighted, setIsWeighted] = useState(activeCompetition?.isWeighted ?? false);
 
     const [minStr, setMinStr] = useState(String(activeCompetition?.scoreMin ?? 0));
     const [maxStr, setMaxStr] = useState(String(activeCompetition?.scoreMax ?? 10));
@@ -47,6 +49,10 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
             scoreUnit: unit.trim() || undefined,
             scoringMode: mode
         });
+
+        if (isWeighted !== activeCompetition.isWeighted) {
+            await updateCompetition(activeCompetition.id, { isWeighted });
+        }
 
         onClose();
     };
@@ -117,6 +123,21 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
 
                     <div className="divider" style={{ margin: '8px 0' }} />
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <input
+                            type="checkbox"
+                            id="isWeightedToggle"
+                            checked={isWeighted}
+                            onChange={e => setIsWeighted(e.target.checked)}
+                            style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
+                        />
+                        <label htmlFor="isWeightedToggle" style={{ fontSize: '14px', cursor: 'pointer' }}>
+                            Enable Weighted Rounds
+                        </label>
+                    </div>
+
+                    <div className="divider" style={{ margin: '8px 0' }} />
+
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                         <button type="button" className="btn" onClick={onClose}>Cancel</button>
 
@@ -143,7 +164,7 @@ export function ManageSettings({ onClose }: { onClose: () => void }) {
                                     padding: '8px',
                                     textAlign: 'center',
                                     zIndex: 10,
-                                    border: '1px solid var(--bad)',
+                                    border: '1px solid var(--danger)',
                                     pointerEvents: 'none'
                                 }}>
                                     {disabledReason}

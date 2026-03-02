@@ -294,7 +294,7 @@ export const ScoreCell = memo(function ScoreCell({
                     justifyContent: 'center',
                     width: '18px',
                     height: '18px',
-                    borderRadius: '5px',
+                    borderRadius: '2px',
                     background: hasImage
                         ? 'var(--accent-dim)'
                         : 'rgba(255,255,255,0.04)',
