@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
+import { ArenaSummary } from '../components/arena/ArenaSummary';
 import { ScoreTable } from '../components/arena/ScoreTable';
 import { GalleryView } from '../components/arena/GalleryView';
 import { ManageContestants } from '../components/arena/ManageContestants';
@@ -12,7 +13,7 @@ import { exportCompetition } from '../io';
 
 export default function Arena() {
     const { id } = useParams();
-    const { loadArena, unloadArena, activeCompetition, updateCompetition } = useStore();
+    const { loadArena, unloadArena, activeCompetition, updateCompetition, toggleLock } = useStore();
     const [showContestants, setShowContestants] = useState(false);
     const [showRounds, setShowRounds] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -24,6 +25,23 @@ export default function Arena() {
 
     const [isCompact, setIsCompact] = useState(() => localStorage.getItem('rm_compact_mode') === 'true');
     const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid');
+
+    // Phase 4: Reveal Mode
+    const [revealMode, setRevealMode] = useState<'live' | 'reveal'>('live');
+    const [isRevealed, setIsRevealed] = useState(false);
+
+    const locked = activeCompetition?.locked ?? false;
+
+    const handleReveal = useCallback(() => {
+        setIsRevealed(true);
+    }, []);
+
+    const handleRevealModeChange = useCallback((mode: 'live' | 'reveal') => {
+        setRevealMode(mode);
+        if (mode === 'reveal') {
+            setIsRevealed(false);
+        }
+    }, []);
 
     const handleGalleryNavigate = useCallback((rowIdx: number, colIdx: number) => {
         setViewMode('grid');
@@ -68,13 +86,15 @@ export default function Arena() {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Top Bar */}
             <header style={{
-                height: '64px',
+                minHeight: '64px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0 24px',
                 borderBottom: '1px solid var(--line)',
-                background: 'var(--panel)'
+                background: 'var(--panel)',
+                flexWrap: 'wrap',
+                gap: '8px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {isEditingTitle ? (
@@ -101,12 +121,13 @@ export default function Arena() {
                         />
                     ) : (
                         <h1
-                            style={{ margin: 0, fontSize: '1.2rem', cursor: 'pointer' }}
+                            style={{ margin: 0, fontSize: '1.2rem', cursor: locked ? 'default' : 'pointer' }}
                             onClick={() => {
+                                if (locked) return;
                                 setTitleStr(activeCompetition.title);
                                 setIsEditingTitle(true);
                             }}
-                            title="Click to rename"
+                            title={locked ? 'Arena is locked' : 'Click to rename'}
                         >
                             {activeCompetition.title}
                         </h1>
@@ -114,21 +135,22 @@ export default function Arena() {
 
                     <span
                         className="chip"
-                        onClick={() => setShowSettings(true)}
-                        title="Configure Scoring"
+                        onClick={() => { if (!locked) setShowSettings(true); }}
+                        title={locked ? 'Arena is locked' : 'Configure Scoring'}
                         style={{
                             fontFamily: 'monospace',
                             border: '1px solid var(--border)',
                             padding: '2px 8px',
                             borderRadius: '12px',
                             fontSize: '12px',
-                            cursor: 'pointer'
+                            cursor: locked ? 'default' : 'pointer',
+                            opacity: locked ? 0.5 : 1,
                         }}
                     >
                         Score: {activeCompetition.scoreMin} - {activeCompetition.scoreMax}{activeCompetition.scoreUnit ? ` ${activeCompetition.scoreUnit}` : ''}
                     </span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {/* View Mode Toggle */}
                     <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                         <button
@@ -155,6 +177,32 @@ export default function Arena() {
                         >Gallery</button>
                     </div>
 
+                    {/* Reveal Mode Toggle */}
+                    <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <button
+                            className="btn"
+                            onClick={() => handleRevealModeChange('live')}
+                            style={{
+                                borderRadius: 0, border: 'none',
+                                background: revealMode === 'live' ? 'var(--accent)' : 'transparent',
+                                color: revealMode === 'live' ? '#000' : 'var(--text)',
+                                fontWeight: revealMode === 'live' ? 700 : 400,
+                                padding: '0 14px', fontSize: '13px',
+                            }}
+                        >Live</button>
+                        <button
+                            className="btn"
+                            onClick={() => handleRevealModeChange('reveal')}
+                            style={{
+                                borderRadius: 0, border: 'none', borderLeft: '1px solid var(--border)',
+                                background: revealMode === 'reveal' ? 'var(--accent)' : 'transparent',
+                                color: revealMode === 'reveal' ? '#000' : 'var(--text)',
+                                fontWeight: revealMode === 'reveal' ? 700 : 400,
+                                padding: '0 14px', fontSize: '13px',
+                            }}
+                        >Reveal</button>
+                    </div>
+
                     <button
                         className="btn"
                         onClick={() => {
@@ -168,21 +216,50 @@ export default function Arena() {
                         🗜️
                     </button>
                     <button className="btn" onClick={() => setShowSaveTemplate(true)}>Save as Template</button>
-                    <button className="btn" onClick={() => setShowContestants(true)}>Manage Contestants</button>
-                    <button className="btn" onClick={() => setShowRounds(true)}>Manage Rounds</button>
+                    <button
+                        className="btn"
+                        onClick={() => setShowContestants(true)}
+                        disabled={locked}
+                        title={locked ? 'Arena is locked' : undefined}
+                        style={{ opacity: locked ? 0.5 : 1 }}
+                    >Manage Contestants</button>
+                    <button
+                        className="btn"
+                        onClick={() => setShowRounds(true)}
+                        disabled={locked}
+                        title={locked ? 'Arena is locked' : undefined}
+                        style={{ opacity: locked ? 0.5 : 1 }}
+                    >Manage Rounds</button>
                     <button className="btn" onClick={async () => {
                         if (confirm("Images are not included in JSON export. They remain local-only. Continue?")) {
                             await exportCompetition(activeCompetition.id);
                         }
                     }}>Export JSON</button>
+
+                    {/* Lock/Unlock Button */}
+                    <button
+                        className={locked ? 'btnPrimary' : 'btn'}
+                        onClick={() => toggleLock()}
+                        title={locked ? 'Unlock Arena' : 'Lock Arena'}
+                        style={{ fontSize: '13px' }}
+                    >
+                        {locked ? '🔓 Unlock' : '🔒 Lock Arena'}
+                    </button>
                 </div>
             </header>
 
+            {/* Locked Banner */}
+            {locked && (
+                <div className="locked-banner">
+                    🏁 Battle Completed — Scores are locked
+                </div>
+            )}
+
             {/* Modals */}
             {showSaveTemplate && <SaveTemplateModal onClose={() => setShowSaveTemplate(false)} />}
-            {showContestants && <ManageContestants onClose={() => setShowContestants(false)} />}
-            {showRounds && <ManageRounds onClose={() => setShowRounds(false)} />}
-            {showSettings && <ManageSettings onClose={() => setShowSettings(false)} />}
+            {showContestants && !locked && <ManageContestants onClose={() => setShowContestants(false)} />}
+            {showRounds && !locked && <ManageRounds onClose={() => setShowRounds(false)} />}
+            {showSettings && !locked && <ManageSettings onClose={() => setShowSettings(false)} />}
 
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', gap: '24px' }}>
@@ -195,8 +272,15 @@ export default function Arena() {
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden', gap: '24px' }}>
                     {viewMode === 'grid' ? (
                         <>
-                            <Leaderboard />
-                            <ScoreTable isCompact={isCompact} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+                                <ArenaSummary />
+                                <Leaderboard
+                                    revealMode={revealMode}
+                                    isRevealed={isRevealed}
+                                    onReveal={handleReveal}
+                                />
+                            </div>
+                            <ScoreTable isCompact={isCompact} locked={locked} />
                         </>
                     ) : (
                         <GalleryView onNavigateToCell={handleGalleryNavigate} />

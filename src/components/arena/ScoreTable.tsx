@@ -1,23 +1,34 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useStore } from '../../state/store';
 import { ScoreCell } from './ScoreCell';
-import { makeEntryId } from '../../domain';
+import { makeEntryId, computeRoundWinners } from '../../domain';
 
 interface ScoreTableProps {
     isCompact?: boolean;
+    locked?: boolean;
 }
 
-export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProps) {
+export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreTableProps) {
     const activeCompetition = useStore(s => s.activeCompetition);
     const contestants = useStore(s => s.contestants);
     const rounds = useStore(s => s.rounds);
+    const entriesById = useStore(s => s.entriesById);
     const reorderRounds = useStore(s => s.reorderRounds);
     const reorderContestants = useStore(s => s.reorderContestants);
+
+    // Memoized round winners
+    const roundWinners = useMemo(
+        () => activeCompetition
+            ? computeRoundWinners(rounds, contestants, entriesById, makeEntryId, activeCompetition.id)
+            : new Map<string, string[]>(),
+        [rounds, contestants, entriesById, activeCompetition]
+    );
 
     const [dragTarget, setDragTarget] = useState<{ type: 'round' | 'contestant', index: number } | null>(null);
     const [draggedItem, setDraggedItem] = useState<{ type: 'round' | 'contestant', index: number } | null>(null);
 
     const handleDragStart = (e: React.DragEvent, type: 'round' | 'contestant', index: number) => {
+        if (locked) { e.preventDefault(); return; }
         setDraggedItem({ type, index });
         e.dataTransfer.setData('type', type);
         e.dataTransfer.setData('index', String(index));
@@ -139,7 +150,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                             <th
                                 key={c.id}
                                 className="col-contestant"
-                                draggable
+                                draggable={!locked}
                                 onDragStart={(e) => handleDragStart(e, 'contestant', idx)}
                                 onDragEnd={handleDragEnd}
                                 onDragOver={(e) => handleDragOver(e, 'contestant', idx)}
@@ -149,7 +160,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                                     padding: '12px',
                                     textAlign: 'center',
                                     borderRight: '1px solid var(--border)',
-                                    cursor: 'grab',
+                                    cursor: locked ? 'default' : 'grab',
                                     transition: 'background-color 0.2s'
                                 }}
                             >
@@ -162,7 +173,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                     {rounds.map((r, rIdx) => (
                         <tr key={r.id}>
                             <td
-                                draggable
+                                draggable={!locked}
                                 onDragStart={(e) => handleDragStart(e, 'round', rIdx)}
                                 onDragEnd={handleDragEnd}
                                 onDragOver={(e) => handleDragOver(e, 'round', rIdx)}
@@ -172,7 +183,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                                     padding: '12px',
                                     borderRight: '1px solid var(--border)',
                                     borderBottom: '1px solid var(--border)',
-                                    cursor: 'grab',
+                                    cursor: locked ? 'default' : 'grab',
                                     transition: 'background-color 0.2s'
                                 }}
                             >
@@ -180,6 +191,8 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                             </td>
                             {contestants.map((c, cIdx) => {
                                 const entryId = makeEntryId(activeCompetition.id, r.id, c.id);
+                                const winners = roundWinners.get(r.id) ?? [];
+                                const isWinner = winners.includes(c.id);
                                 return (
                                     <ScoreCell
                                         key={entryId}
@@ -195,6 +208,8 @@ export const ScoreTable = memo(function ScoreTable({ isCompact }: ScoreTableProp
                                         onNavigate={(rowDelta, colDelta) => handleNavigate(rIdx, cIdx, rowDelta, colDelta)}
                                         contestantName={c.name}
                                         roundTitle={r.title}
+                                        isWinner={isWinner}
+                                        locked={locked}
                                     />
                                 )
                             })}

@@ -11,6 +11,7 @@ export interface Competition {
     createdAt: number;                   // Date.now()
     updatedAt: number;
     ui: { theme: 'neoArcade' | 'calm'; density: 'comfortable' | 'compact' };
+    locked?: boolean;                    // Phase 4: Score Locking (default false)
 }
 
 export interface Contestant {

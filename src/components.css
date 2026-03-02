@@ -113,3 +113,30 @@
     box-shadow: 0 0 12px var(--accent-glow);
     transform: translateY(-1px);
 }
+
+/* Phase 4 — Battle Experience Layer */
+
+.winner-glow {
+    box-shadow: 0 0 16px var(--accent-glow), inset 0 0 12px rgba(201, 162, 39, 0.08);
+    border-color: var(--accent) !important;
+}
+
+.round-winner-cell {
+    box-shadow: inset 0 0 0 2px var(--accent-glow);
+    background: rgba(201, 162, 39, 0.06) !important;
+}
+
+.locked-banner {
+    padding: 8px 24px;
+    background: rgba(201, 162, 39, 0.10);
+    border-bottom: 1px solid var(--accent);
+    color: var(--accent-text);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.arena-summary {
+    padding: 16px !important;
+}

@@ -27,7 +27,7 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', color: 'inherit' }}>
-                    <img src={logoUrl} alt="Rankmine Logo" style={{ height: isArena ? '102px' : '140px', width: 'auto', transition: 'height 0.2s ease' }} />
+                    <img src={logoUrl} alt="Rankmine Logo" style={{ height: isArena ? '162px' : '192px', width: 'auto', transition: 'height 0.2s ease' }} />
                     {!isArena && <span style={{ fontWeight: 600, fontSize: '1.25rem', letterSpacing: '0.5px' }}></span>}
                 </Link>
             </div>

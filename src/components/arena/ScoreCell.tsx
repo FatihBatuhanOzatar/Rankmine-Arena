@@ -17,6 +17,8 @@ interface ScoreCellProps {
     onNavigate: (rowDelta: number, colDelta: number) => void;
     contestantName?: string;
     roundTitle?: string;
+    isWinner?: boolean;
+    locked?: boolean;
 }
 
 export const ScoreCell = memo(function ScoreCell({
@@ -31,7 +33,9 @@ export const ScoreCell = memo(function ScoreCell({
     colIdx,
     onNavigate,
     contestantName,
-    roundTitle
+    roundTitle,
+    isWinner,
+    locked
 }: ScoreCellProps) {
     const entry = useStore(useCallback(s => s.entriesById[entryId], [entryId]));
     const upsertEntry = useStore(s => s.upsertEntry);
@@ -72,6 +76,7 @@ export const ScoreCell = memo(function ScoreCell({
     }, [isEditing, draftValue, upsertEntry, roundId, contestantId, max, min, step, val]);
 
     const handleFocus = () => {
+        if (locked) return;
         setIsEditing(true);
         setDraftValue(val !== '' ? String(val) : '');
     };
@@ -128,6 +133,7 @@ export const ScoreCell = memo(function ScoreCell({
     };
 
     const handleSliderPointerDown = () => {
+        if (locked) return;
         setIsEditing(true);
         setDraftValue(val !== '' ? String(val) : String(min));
     };
@@ -142,6 +148,7 @@ export const ScoreCell = memo(function ScoreCell({
     };
 
     const handleStarClick = (value: number) => {
+        if (locked) return;
         upsertEntry(roundId, contestantId, value);
     };
 
@@ -149,7 +156,10 @@ export const ScoreCell = memo(function ScoreCell({
     const hasImage = !!entry?.assetId;
 
     return (
-        <td style={{ border: '1px solid var(--border)', padding: '0', textAlign: 'center', position: 'relative' }}>
+        <td
+            className={isWinner ? 'round-winner-cell' : ''}
+            style={{ border: '1px solid var(--border)', padding: '0', textAlign: 'center', position: 'relative' }}
+        >
             {mode === 'numeric' && (
                 <input
                     ref={inputRef}
