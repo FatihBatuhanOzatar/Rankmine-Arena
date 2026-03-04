@@ -1,18 +1,61 @@
 # Rankmine Arena
 
-A barebones proof-of-concept for the Rankmine Arena app. This Phase-1 minimal viable product establishes basic design patterns without feature bloat.
+Run structured, side-by-side battles and rank anything with controlled scoring.
 
-## Milestone 0: CSS Loads Proof
-Here is the required screenshot proving that CSS variables, buttons, and card styling successfully apply to the initial Scaffold without Tailwind or PostCSS configuring.
+Rankmine Arena is a local-first competitive evaluation tool designed for fair comparisons.  
+Create rounds, add contestants, score blind if needed, and generate a clear leaderboard.
 
-![M0 CSS Proof Screenshot](screenshot.png)
+---
 
-## Architecture Limitations (Decisions)
-Please see our [DECISIONS.md](DECISIONS.md) file directly for documented reasons regarding:
-*   ID generation on Import
-*   Persistence Guarantees
-*   Garbage Collection behavior on Orphan Images
+## What It Does
 
-## Building Locally
-*   `npm install`
-*   `npm run dev` (Runs Vite server on port 5174)
+- Create multi-round competitions
+- Add contestants with text or image outputs
+- Score entries per round
+- Reveal results with dynamic leaderboard
+- Switch between Total, Average, and Weighted scoring
+- Save reusable templates
+- Export / import full battle state as JSON
+
+---
+
+## Why It Exists
+
+Most comparisons are chaotic.
+
+Rankmine Arena introduces structure:
+- Defined criteria (rounds)
+- Transparent scoring
+- Controlled ranking logic
+- Optional weighted evaluation
+
+Built for evaluating:
+- AI model outputs
+- Design variations
+- Startup pitches
+- Prompt engineering results
+- Any structured competition
+
+---
+
+## Current Status
+
+Actively developed.
+
+Core battle engine and scoring system are functional.  
+Collaboration and publishing features are planned.
+
+---
+
+## Tech Stack
+
+- React
+- TypeScript
+- Zustand
+- IndexedDB (local-first persistence)
+
+---
+
+## Vision
+
+Turn structured comparison into a shareable, fair, and powerful evaluation experience.
