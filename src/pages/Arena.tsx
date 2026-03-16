@@ -10,6 +10,8 @@ import { ManageRounds } from '../components/arena/ManageRounds';
 import { ManageSettings } from '../components/arena/ManageSettings';
 import { SaveTemplateModal } from '../components/arena/SaveTemplateModal';
 import { exportCompetition } from '../io';
+import { buildPublishedPayload } from '../domain/publishedArena';
+import { publishArena } from '../api/publish';
 
 export default function Arena() {
     const { id } = useParams();
@@ -31,6 +33,33 @@ export default function Arena() {
     const [isRevealed, setIsRevealed] = useState(false);
 
     const locked = activeCompetition?.locked ?? false;
+
+    // Phase 5: Publish
+    const contestants = useStore(s => s.contestants);
+    const rounds = useStore(s => s.rounds);
+    const entriesById = useStore(s => s.entriesById);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [publishError, setPublishError] = useState<string | null>(null);
+
+    const publishedSlug = activeCompetition?.publishedSlug ?? null;
+    const publicUrl = publishedSlug ? `${window.location.origin}/p/${publishedSlug}` : null;
+
+    const handlePublish = useCallback(async () => {
+        if (!activeCompetition || isPublishing) return;
+        setIsPublishing(true);
+        setPublishError(null);
+        try {
+            const entries = Object.values(entriesById);
+            const payload = buildPublishedPayload(activeCompetition, contestants, rounds, entries);
+            const slug = crypto.randomUUID().slice(0, 8);
+            await publishArena(payload, slug);
+            await updateCompetition(activeCompetition.id, { publishedSlug: slug, publishedAt: Date.now() });
+        } catch (err) {
+            setPublishError(err instanceof Error ? err.message : 'Publish failed');
+        } finally {
+            setIsPublishing(false);
+        }
+    }, [activeCompetition, contestants, rounds, entriesById, isPublishing, updateCompetition]);
 
     const handleReveal = useCallback(() => {
         setIsRevealed(true);
@@ -245,8 +274,43 @@ export default function Arena() {
                     >
                         {locked ? '🔓 Unlock' : '🔒 Lock Arena'}
                     </button>
+
+                    {/* Phase 5: Publish */}
+                    {publishedSlug ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="chip" style={{ background: 'var(--accent-dim)', borderColor: 'var(--accent)', color: 'var(--accent-text)', fontSize: '11px' }}>Published</span>
+                            <button
+                                className="btn"
+                                onClick={() => {
+                                    if (publicUrl) {
+                                        navigator.clipboard.writeText(publicUrl);
+                                    }
+                                }}
+                                title={publicUrl ?? ''}
+                                style={{ fontSize: '13px' }}
+                            >
+                                🔗 Copy Link
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            className="btn"
+                            onClick={handlePublish}
+                            disabled={isPublishing}
+                            style={{ fontSize: '13px', opacity: isPublishing ? 0.5 : 1 }}
+                        >
+                            {isPublishing ? '⏳ Publishing…' : '📡 Publish'}
+                        </button>
+                    )}
                 </div>
             </header>
+
+            {/* Publish error */}
+            {publishError && (
+                <div style={{ padding: '8px 24px', background: 'rgba(220, 53, 69, 0.15)', borderBottom: '1px solid var(--danger)', color: 'var(--danger)', textAlign: 'center', fontSize: '13px' }}>
+                    ⚠ {publishError}
+                </div>
+            )}
 
             {/* Locked Banner */}
             {locked && (
