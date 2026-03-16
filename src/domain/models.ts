@@ -13,6 +13,8 @@ export interface Competition {
     ui: { theme: 'neoArcade' | 'calm' | 'light'; density: 'comfortable' | 'compact' };
     locked?: boolean;                    // Phase 4: Score Locking (default false)
     isWeighted?: boolean;                // Phase 4 Extension: Optional weighted rounds (default false)
+    publishedSlug?: string | null;       // Phase 5: Public arena slug (null = not published)
+    publishedAt?: number | null;         // Phase 5: Timestamp of last publish
 }
 
 export interface Contestant {
