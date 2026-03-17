@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { importCompetition } from '../io';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-
+import { PublicArenaList } from '../components/PublicArenaList';
 export default function Landing() {
     const navigate = useNavigate();
     const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate, createGridCompetition } = useStore();
@@ -154,6 +154,12 @@ export default function Landing() {
             <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0 }}>Import Backup</h3>
                 <input type="file" accept=".json" onChange={handleImport} style={{ color: 'var(--text)', background: 'transparent' }} />
+            </div>
+
+            <div className="public-listing-section">
+                <h2>Explore Community Arenas</h2>
+                <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>Discover battles published by others.</p>
+                <PublicArenaList />
             </div>
 
             {import.meta.env.DEV && (

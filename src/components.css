@@ -281,3 +281,86 @@
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
 }
+
+/* ── Public Discovery (Listing) ──────────────────────────────────────── */
+
+.public-listing-section {
+    margin-top: 64px;
+    padding-top: 40px;
+    border-top: 1px solid var(--line);
+}
+
+.public-listing-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+}
+
+.public-listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.public-arena-card {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    transition: box-shadow 0.2s, transform 0.2s;
+    height: 100%;
+}
+
+.public-arena-card:hover {
+    box-shadow: 0 0 16px var(--accent-glow);
+    transform: translateY(-2px);
+    border-color: var(--accent);
+}
+
+.public-arena-card-title {
+    margin: 0 0 12px 0;
+    font-size: 1.2rem;
+    color: var(--accent-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.public-arena-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    flex: 1;
+}
+
+.bullet {
+    opacity: 0.4;
+    font-size: 10px;
+}
+
+.public-arena-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+}
+
+.public-arena-card-cta {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    transition: color 0.2s;
+}
+
+.public-arena-card:hover .public-arena-card-cta {
+    color: var(--accent-text);
+}
