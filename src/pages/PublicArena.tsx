@@ -1,29 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import logoUrlDark from '../assets/rankminelogo.png';
+import logoUrlLight from '../assets/rankminelogo_dark.png';
 import { fetchPublishedArena } from '../api/publish';
+import { fetchSubmissions, submitJuryScores } from '../api/submissions';
 import type { PublishedArenaPayload } from '../domain/publishedArena';
+import type { JurySubmissionPayload, JurySubmissionRow } from '../domain/submissions';
+import { aggregateJuryEntries } from '../domain/aggregatePublicArena';
 import { computeLeaderboard } from '../domain/leaderboard';
 import { computeRoundWinners, computeArenaSummary } from '../domain/battleStats';
 import type { Contestant, Round, Entry } from '../domain/models';
+import type { LeaderboardRow } from '../domain/leaderboard';
+import type { ArenaSummary as ArenaSummaryType } from '../domain/battleStats';
+import PublicJuryForm from '../components/PublicJuryForm';
 
 type Status = 'loading' | 'ready' | 'not-found' | 'error';
+type ViewMode = 'observer' | 'jury';
+
+const SUBMITTED_KEY = (slug: string) => `jury_submitted_${slug}`;
 
 export default function PublicArena() {
     const { slug } = useParams<{ slug: string }>();
     const [status, setStatus] = useState<Status>(() => slug ? 'loading' : 'not-found');
     const [payload, setPayload] = useState<PublishedArenaPayload | null>(null);
+    const [submissions, setSubmissions] = useState<JurySubmissionRow[]>([]);
     const [errorMsg, setErrorMsg] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('observer');
+    const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(() => {
+        if (!slug) return false;
+        try {
+            return !!localStorage.getItem(SUBMITTED_KEY(slug));
+        } catch { return false; }
+    });
 
+    // ── Fetch published arena + submissions ──────────────────────────
     useEffect(() => {
         if (!slug) return;
 
         let cancelled = false;
         (async () => {
             try {
-                const row = await fetchPublishedArena(slug);
+                const [row, subs] = await Promise.all([
+                    fetchPublishedArena(slug),
+                    fetchSubmissions(slug),
+                ]);
                 if (cancelled) return;
                 if (!row) { setStatus('not-found'); return; }
                 setPayload(row.payload);
+                setSubmissions(subs);
                 setStatus('ready');
             } catch (err) {
                 if (cancelled) return;
@@ -40,10 +64,32 @@ export default function PublicArena() {
         const theme = payload.competition.theme === 'light' ? 'light' : 'neoArcade';
         document.documentElement.setAttribute('data-theme', theme);
         return () => {
-            // Restore default on unmount
             document.documentElement.setAttribute('data-theme', 'neoArcade');
         };
     }, [payload]);
+
+    // ── Jury submit handler ──────────────────────────────────────────
+    const handleJurySubmit = useCallback(async (juryName: string, submission: JurySubmissionPayload) => {
+        if (!slug || !payload) throw new Error('No arena loaded');
+
+        await submitJuryScores(
+            slug,
+            juryName,
+            submission,
+            payload.contestants.length,
+            payload.rounds.length
+        );
+
+        // Mark as submitted in localStorage
+        try {
+            localStorage.setItem(SUBMITTED_KEY(slug), '1');
+        } catch { /* localStorage unavailable */ }
+        setAlreadySubmitted(true);
+
+        // Refetch submissions to update aggregate
+        const subs = await fetchSubmissions(slug);
+        setSubmissions(subs);
+    }, [slug, payload]);
 
     if (status === 'loading') return <PublicShell><LoadingView /></PublicShell>;
     if (status === 'not-found') return <PublicShell><NotFoundView /></PublicShell>;
@@ -52,7 +98,22 @@ export default function PublicArena() {
 
     return (
         <PublicShell>
-            <PublicArenaContent payload={payload} />
+            {viewMode === 'jury' ? (
+                <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+                    <PublicJuryForm
+                        payload={payload}
+                        onSubmit={handleJurySubmit}
+                        onCancel={() => setViewMode('observer')}
+                    />
+                </div>
+            ) : (
+                <PublicArenaContent
+                    payload={payload}
+                    submissions={submissions}
+                    onJuryClick={() => setViewMode('jury')}
+                    alreadySubmitted={alreadySubmitted}
+                />
+            )}
         </PublicShell>
     );
 }
@@ -60,11 +121,43 @@ export default function PublicArena() {
 // ── Shell ────────────────────────────────────────────────────────────
 
 function PublicShell({ children }: { children: React.ReactNode }) {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
-            <header className="public-arena-header">
-                <span className="public-arena-brand">⚔ Rankmine Arena</span>
-                <span className="public-arena-badge">Public View</span>
+            <header className="app-header" style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 50,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0 24px',
+                height: '48px',
+                borderBottom: '1px solid var(--line)',
+                background: 'var(--panel)',
+                backdropFilter: 'blur(10px)',
+                transition: 'height 0.2s ease'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', height: '100%' }}>
+                    <Link to="/" className="logo-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>
+                        <img 
+                            src={isLight ? logoUrlLight : logoUrlDark} 
+                            alt="Rankmine Logo" 
+                            style={{ height: '162px', width: 'auto', transition: 'height 0.2s ease' }} 
+                        />
+                    </Link>
+                    <span style={{
+                        background: 'var(--accent)',
+                        color: 'var(--bg)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                    }}>Public View</span>
+                </div>
             </header>
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {children}
@@ -106,8 +199,30 @@ function ErrorView({ message }: { message: string }) {
 
 // ── Main Content ─────────────────────────────────────────────────────
 
-function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
+interface PublicArenaContentProps {
+    payload: PublishedArenaPayload;
+    submissions: JurySubmissionRow[];
+    onJuryClick: () => void;
+    alreadySubmitted: boolean;
+}
+
+function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitted }: PublicArenaContentProps) {
     const { competition, contestants, rounds, entries } = payload;
+    const hasJurySubmissions = submissions.length > 0;
+
+    // ── Which data source to show ────────────────────────────────────
+    // Tabs: 'organizer' (published snapshot baseline) | 'jury' (aggregated jury scores)
+    const [resultsTab, setResultsTab] = useState<'organizer' | 'jury'>(() =>
+        hasJurySubmissions ? 'jury' : 'organizer'
+    );
+
+    const [prevSubLength, setPrevSubLength] = useState(submissions.length);
+    if (submissions.length !== prevSubLength) {
+        setPrevSubLength(submissions.length);
+        if (prevSubLength === 0 && submissions.length > 0) {
+            setResultsTab('jury');
+        }
+    }
 
     // Reconstruct domain-compatible objects for pure compute functions
     const domainContestants: Contestant[] = useMemo(() =>
@@ -134,7 +249,8 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
         [rounds, payload.sourceCompetitionId]
     );
 
-    const domainEntries: Entry[] = useMemo(() =>
+    // Organizer entries (from published snapshot)
+    const organizerEntries: Entry[] = useMemo(() =>
         entries.map(e => ({
             id: `${payload.sourceCompetitionId}::${e.roundId}::${e.contestantId}`,
             competitionId: payload.sourceCompetitionId,
@@ -146,18 +262,27 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
         [entries, payload.sourceCompetitionId]
     );
 
+    // Jury aggregated entries
+    const juryEntries: Entry[] = useMemo(() =>
+        aggregateJuryEntries(submissions, payload),
+        [submissions, payload]
+    );
+
+    // Select which entries to use for display
+    const activeEntries = resultsTab === 'jury' && hasJurySubmissions ? juryEntries : organizerEntries;
+
     const entriesById = useMemo(() => {
         const map: Record<string, Entry> = {};
-        for (const e of domainEntries) map[e.id] = e;
+        for (const e of activeEntries) map[e.id] = e;
         return map;
-    }, [domainEntries]);
+    }, [activeEntries]);
 
     const makeId = (compId: string, roundId: string, contestantId: string) =>
         `${compId}::${roundId}::${contestantId}`;
 
     const leaderboardRows = useMemo(
-        () => computeLeaderboard(domainContestants, domainEntries, domainRounds, 'total'),
-        [domainContestants, domainEntries, domainRounds]
+        () => computeLeaderboard(domainContestants, activeEntries, domainRounds, 'total'),
+        [domainContestants, activeEntries, domainRounds]
     );
 
     const roundWinners = useMemo(
@@ -166,8 +291,18 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
     );
 
     const summary = useMemo(
-        () => computeArenaSummary(domainContestants, domainEntries, domainRounds, roundWinners, competition.isWeighted),
-        [domainContestants, domainEntries, domainRounds, roundWinners, competition.isWeighted]
+        () => computeArenaSummary(domainContestants, activeEntries, domainRounds, roundWinners, competition.isWeighted),
+        [domainContestants, activeEntries, domainRounds, roundWinners, competition.isWeighted]
+    );
+
+    // Build display entries for score table
+    const displayEntries = useMemo(() =>
+        activeEntries.map(e => ({
+            roundId: e.roundId,
+            contestantId: e.contestantId,
+            score: e.score,
+        })),
+        [activeEntries]
     );
 
     return (
@@ -175,7 +310,7 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
             {/* Title */}
             <div style={{ marginBottom: '24px' }}>
                 <h1 style={{ margin: 0, fontSize: '1.6rem' }}>{competition.title}</h1>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <span className="chip">
                         Score: {competition.scoreMin} – {competition.scoreMax}
                         {competition.scoreUnit ? ` ${competition.scoreUnit}` : ''}
@@ -186,13 +321,48 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
                 </div>
             </div>
 
+            {/* Jury Action Bar */}
+            <div className="jury-action-bar">
+                {/* Data source tabs */}
+                {hasJurySubmissions && (
+                    <div className="jury-tabs">
+                        <button
+                            className={`jury-tab ${resultsTab === 'jury' ? 'jury-tab-active' : ''}`}
+                            onClick={() => setResultsTab('jury')}
+                        >
+                            🗳 Jury Results ({submissions.length})
+                        </button>
+                        <button
+                            className={`jury-tab ${resultsTab === 'organizer' ? 'jury-tab-active' : ''}`}
+                            onClick={() => setResultsTab('organizer')}
+                        >
+                            📋 Organizer Baseline
+                        </button>
+                    </div>
+                )}
+                {!hasJurySubmissions && (
+                    <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                        No jury submissions yet — showing organizer baseline
+                    </div>
+                )}
+
+                {/* Jury CTA */}
+                <div style={{ marginLeft: 'auto' }}>
+                    {alreadySubmitted ? (
+                        <span className="jury-submitted-badge">✓ You've submitted</span>
+                    ) : (
+                        <button className="btnPrimary" onClick={onJuryClick}>
+                            🗳 Contribute as Jury
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Layout: sidebar + score table */}
             <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 {/* Sidebar: Summary + Leaderboard */}
                 <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Summary */}
                     <PublicSummary summary={summary} isWeighted={competition.isWeighted} />
-                    {/* Leaderboard */}
                     <PublicLeaderboard rows={leaderboardRows} />
                 </div>
 
@@ -201,7 +371,8 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
                     <PublicScoreTable
                         rounds={rounds}
                         contestants={contestants}
-                        entries={entries}
+                        entries={displayEntries}
+                        payloadEntries={entries}
                         roundWinners={roundWinners}
                         scoringMode={competition.scoringMode}
                         scoreMin={competition.scoreMin}
@@ -214,14 +385,17 @@ function PublicArenaContent({ payload }: { payload: PublishedArenaPayload }) {
             {/* Footer */}
             <div className="public-arena-footer">
                 Published {new Date(payload.publishedAt).toLocaleString()}
+                {hasJurySubmissions && resultsTab === 'jury' && (
+                    <span style={{ marginLeft: '12px' }}>
+                        • Jury aggregate from {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
         </div>
     );
 }
 
 // ── Public Leaderboard ───────────────────────────────────────────────
-
-import type { LeaderboardRow } from '../domain/leaderboard';
 
 function PublicLeaderboard({ rows }: { rows: LeaderboardRow[] }) {
     return (
@@ -258,8 +432,6 @@ function PublicLeaderboard({ rows }: { rows: LeaderboardRow[] }) {
 }
 
 // ── Public Summary ───────────────────────────────────────────────────
-
-import type { ArenaSummary as ArenaSummaryType } from '../domain/battleStats';
 
 function PublicSummary({ summary, isWeighted }: { summary: ArenaSummaryType; isWeighted: boolean }) {
     if (!summary.overallWinner) {
@@ -324,7 +496,8 @@ function PublicSummary({ summary, isWeighted }: { summary: ArenaSummaryType; isW
 interface PublicScoreTableProps {
     rounds: PublishedArenaPayload['rounds'];
     contestants: PublishedArenaPayload['contestants'];
-    entries: PublishedArenaPayload['entries'];
+    entries: { roundId: string; contestantId: string; score?: number }[];
+    payloadEntries: PublishedArenaPayload['entries'];
     roundWinners: Map<string, string[]>;
     scoringMode: string;
     scoreMin: number;
@@ -332,8 +505,7 @@ interface PublicScoreTableProps {
     isWeighted: boolean;
 }
 
-function PublicScoreTable({ rounds, contestants, entries, roundWinners, scoringMode, scoreMin, scoreMax, isWeighted }: PublicScoreTableProps) {
-    // Build a lookup: `${roundId}::${contestantId}` → score
+function PublicScoreTable({ rounds, contestants, entries, payloadEntries, roundWinners, scoringMode, scoreMin, scoreMax, isWeighted }: PublicScoreTableProps) {
     const scoreLookup = useMemo(() => {
         const map = new Map<string, number | undefined>();
         for (const e of entries) {
@@ -341,6 +513,16 @@ function PublicScoreTable({ rounds, contestants, entries, roundWinners, scoringM
         }
         return map;
     }, [entries]);
+
+    const assetLookup = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const e of payloadEntries) {
+            if (e.publicAssetUrl) {
+                map.set(`${e.roundId}::${e.contestantId}`, e.publicAssetUrl);
+            }
+        }
+        return map;
+    }, [payloadEntries]);
 
     const renderScore = (score: number | undefined) => {
         if (score === undefined) return <span style={{ color: 'var(--muted)' }}>–</span>;
@@ -366,7 +548,7 @@ function PublicScoreTable({ rounds, contestants, entries, roundWinners, scoringM
             );
         }
 
-        return <span style={{ fontWeight: 600 }}>{score}</span>;
+        return <span style={{ fontWeight: 600, fontSize: '1.2rem' }}>{scoringMode === 'slider' ? score.toFixed(1) : score}</span>;
     };
 
     return (
@@ -388,25 +570,30 @@ function PublicScoreTable({ rounds, contestants, entries, roundWinners, scoringM
                                 <td className="public-round-cell">
                                     {r.title}
                                     {isWeighted && (
-                                        <span style={{ marginLeft: '8px', color: 'var(--muted)', fontSize: '11px' }}>
-                                            ×{r.weight.toFixed(1)}
-                                        </span>
+                                        <div style={{ color: 'var(--muted)', fontSize: '11px', marginTop: '4px' }}>
+                                            Weight: {r.weight.toFixed(1)}
+                                        </div>
                                     )}
                                 </td>
                                 {contestants.map(c => {
                                     const score = scoreLookup.get(`${r.id}::${c.id}`);
+                                    const assetUrl = assetLookup.get(`${r.id}::${c.id}`);
                                     const isWinner = winners.includes(c.id);
                                     return (
                                         <td
                                             key={c.id}
-                                            className={isWinner ? 'round-winner-cell' : ''}
-                                            style={{
-                                                textAlign: 'center',
-                                                padding: '10px 8px',
-                                                border: '1px solid var(--border)',
-                                            }}
+                                            className={isWinner ? 'round-winner-cell public-score-cell' : 'public-score-cell'}
                                         >
-                                            {renderScore(score)}
+                                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>
+                                                {assetUrl && (
+                                                    <div style={{ marginBottom: '8px', borderRadius: '4px', overflow: 'hidden', background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <img src={assetUrl} alt="Entry content" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain' }} loading="lazy" />
+                                                    </div>
+                                                )}
+                                                <div style={{ textAlign: 'center' }}>
+                                                    {renderScore(score)}
+                                                </div>
+                                            </div>
                                         </td>
                                     );
                                 })}
@@ -415,8 +602,8 @@ function PublicScoreTable({ rounds, contestants, entries, roundWinners, scoringM
                     })}
                     {rounds.length === 0 && (
                         <tr>
-                            <td colSpan={contestants.length + 1} style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)' }}>
-                                No rounds.
+                            <td colSpan={contestants.length + 1} style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>
+                                No rounds mapped for this arena.
                             </td>
                         </tr>
                     )}

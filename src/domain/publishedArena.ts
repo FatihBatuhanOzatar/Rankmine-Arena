@@ -36,6 +36,8 @@ export interface PublishedArenaPayload {
         roundId: string;
         contestantId: string;
         score?: number;
+        assetId?: string;
+        publicAssetUrl?: string;
     }[];
 }
 
@@ -87,6 +89,7 @@ export function buildPublishedPayload(
             roundId: e.roundId,
             contestantId: e.contestantId,
             score: e.score,
+            assetId: e.assetId,
         })),
     };
 }

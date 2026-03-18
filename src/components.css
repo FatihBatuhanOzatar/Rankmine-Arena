@@ -239,6 +239,7 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     background: var(--bg);
+    max-height: 80vh;
 }
 
 .public-score-table {
@@ -251,7 +252,7 @@
 .public-score-table thead {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 10;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
 }
@@ -259,20 +260,24 @@
 .public-score-table th {
     padding: 12px;
     border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .public-col-round {
     width: 250px;
     min-width: 250px;
     text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background: var(--panel);
 }
 
 .public-col-contestant {
     min-width: 120px;
     width: 120px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
     text-align: center;
 }
 
@@ -280,6 +285,24 @@
     padding: 12px;
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--panel);
+}
+
+.public-score-cell {
+    padding: 12px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    background: var(--bg);
+    transition: background-color 0.2s;
+}
+
+.public-score-cell.round-winner-cell {
+    background: rgba(201, 162, 39, 0.08); /* Amber-tinted background */
+    border-bottom: 2px solid var(--accent); /* Pronounced highlight */
 }
 
 /* ── Public Discovery (Listing) ──────────────────────────────────────── */
@@ -364,3 +387,118 @@
 .public-arena-card:hover .public-arena-card-cta {
     color: var(--accent-text);
 }
+
+/* ── Phase 7 — Jury Submission ──────────────────────────────────────── */
+
+.jury-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+}
+
+.jury-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.jury-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-btn);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.jury-tab:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+}
+
+.jury-tab-active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+}
+
+.jury-submitted-badge {
+    display: inline-block;
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    color: var(--accent-text);
+    background: var(--accent-dim);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.jury-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.jury-form-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.jury-score-table-wrapper {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.jury-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+}
+
+.jury-error {
+    font-size: 13px;
+    color: var(--danger);
+    padding: 4px 0;
+}
+
+.jury-success-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 64px 24px;
+    text-align: center;
+}
+
+.jury-success-icon {
+    font-size: 3rem;
+}
+
+.jury-success-text {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.jury-success-sub {
+    font-size: 0.9rem;
+    color: var(--muted);
+}

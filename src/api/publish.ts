@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase';
+import { useStore } from '../state/store';
 import type { PublishedArenaPayload } from '../domain/publishedArena';
 
 // ── Publish ─────────────────────────────────────────────────────────
@@ -7,14 +8,48 @@ export async function publishArena(
     payload: PublishedArenaPayload,
     slug: string
 ): Promise<void> {
+    const store = useStore.getState();
+    const finalPayload = { ...payload, entries: [...payload.entries] };
+
+    // Upload local assets to Supabase storage
+    for (let i = 0; i < finalPayload.entries.length; i++) {
+        const entry = finalPayload.entries[i];
+        if (entry.assetId) {
+            const blob = await store.getAssetBlob(entry.assetId);
+            if (blob) {
+                const ext = blob.type.split('/')[1] || 'png';
+                const fileName = `${slug}/${entry.assetId}.${ext}`;
+
+                const { error: uploadError } = await getSupabase()
+                    .storage
+                    .from('arena-assets')
+                    .upload(fileName, blob, { upsert: true });
+
+                if (!uploadError) {
+                    const { data } = getSupabase()
+                        .storage
+                        .from('arena-assets')
+                        .getPublicUrl(fileName);
+
+                    finalPayload.entries[i] = {
+                        ...entry,
+                        publicAssetUrl: data.publicUrl
+                    };
+                }
+            }
+            // Strip local DB reference from remote payload
+            delete finalPayload.entries[i].assetId;
+        }
+    }
+
     const { error } = await getSupabase()
         .from('published_arenas')
         .insert({
             slug,
-            payload,
-            title: payload.competition.title,
-            contestant_count: payload.contestants.length,
-            round_count: payload.rounds.length
+            payload: finalPayload,
+            title: finalPayload.competition.title,
+            contestant_count: finalPayload.contestants.length,
+            round_count: finalPayload.rounds.length
         });
 
     if (error) {
