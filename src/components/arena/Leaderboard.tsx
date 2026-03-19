@@ -143,7 +143,14 @@ export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, o
 
             {displayRows.map((row, idx) => {
                 const id = row.contestant.id;
-                const rank = showSorted ? idx + 1 : '?';
+                const numericRank = showSorted ? idx + 1 : -1;
+                const rank = showSorted ? numericRank : '?';
+                
+                const isRank1 = numericRank === 1;
+                const isRank2 = numericRank === 2;
+                const isRank3 = numericRank === 3;
+                const isRecessive = numericRank >= 4;
+
                 const isWinner = showSorted && isRevealed && id === winnerId && revealMode === 'reveal';
                 const isLiveWinner = isLive && idx === 0 && sortedRows.length > 0;
 
@@ -155,31 +162,44 @@ export const Leaderboard = memo(function Leaderboard({ revealMode, isRevealed, o
                         style={{
                             display: 'flex',
                             alignItems: 'center',
-                            padding: '12px 16px',
+                            padding: isRank1 ? '16px 20px' : '12px 16px',
                             marginBottom: '8px',
+                            border: isRank1 ? '1px solid rgba(193,68,14,0.6)' : '1px solid var(--border)',
+                            background: isRank1 ? 'rgba(193,68,14,0.07)' : 'var(--panel)',
+                            borderLeft: isRank1 ? undefined : (isRank2 ? '3px solid rgba(180,180,180,0.4)' : (isRank3 ? '3px solid rgba(140,100,60,0.4)' : undefined)),
+                            opacity: isRecessive ? 0.65 : 1,
+                            transition: 'all 0.2s ease', 
                         }}
                     >
                         <div style={{
-                            width: '28px',
-                            height: '28px',
+                            width: isRank1 ? '36px' : '28px',
+                            height: isRank1 ? '36px' : '28px',
                             borderRadius: '50%',
-                            background: 'var(--border)',
+                            background: isRank1 ? 'var(--accent)' : 'var(--border)',
+                            color: isRank1 ? '#fff' : 'var(--text)',
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
                             marginRight: '12px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            fontSize: isRank1 ? '16px' : '14px',
                         }}>
-                            {rank}
+                            {isRank1 ? '👑' : rank}
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 'bold' }}>{row.contestant.name}</div>
+                            <div style={{ 
+                                fontWeight: 'bold', 
+                                fontSize: isRank1 ? '1.1rem' : '1rem',
+                                color: (isRank2 || isRank3) ? '#fff' : (isRecessive ? 'var(--muted)' : undefined) 
+                            }}>
+                                {row.contestant.name}
+                            </div>
                             <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{row.progressText}</div>
                         </div>
                         <div style={{
-                            fontSize: '1.5rem',
+                            fontSize: isRank1 ? '1.3em' : '1.1em',
                             fontWeight: 'bold',
-                            color: 'var(--accent)',
+                            color: isRank1 ? 'var(--accent)' : 'var(--accent)',
                             ...((!isLive && !isRevealed) ? { filter: 'blur(8px)', userSelect: 'none' as const } : {})
                         }}>
                             {row.displayScore}

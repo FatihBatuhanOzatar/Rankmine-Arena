@@ -5,23 +5,25 @@
   --panel: #0e0e0e;
   --panel-elevated: #161616;
   --panel2: #161616;
-  --border: #2c2c2c;
-  --line: #2c2c2c;
+  --border: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.07);
   --text: #e6e6e6;
   --fg: #e6e6e6;
   --muted: #9a9a9f;
-  --accent: #d4a017;
-  --accent-glow: rgba(212, 160, 23, 0.35);
-  --accent-dim: rgba(212, 160, 23, 0.10);
-  --accent-text: #F0D45E;
+  --accent: #C1440E;
+  --accent-hover: #D94F15;
+  --accent-glow: rgba(193, 68, 14, 0.08);
+  --accent-dim: rgba(193, 68, 14, 0.15);
+  --accent-border: rgba(193, 68, 14, 0.35);
+  --accent-text: #D94F15;
   --magenta: #FF4FD8;
   --good: #47FF9A;
   --bad: #FF5A7A;
   --danger: #b34747;
   --dangerMuted: #7a2c2c;
-  --radius-card: 4px;
-  --radius-btn: 3px;
-  --radius-input: 3px;
+  --radius-card: 8px;
+  --radius-btn: 8px;
+  --radius-input: 8px;
 }
 
 [data-theme="light"] {
@@ -31,12 +33,14 @@
   --text: #2C2B29;
   --fg: #2C2B29;
   --muted: rgba(44, 43, 41, 0.60);
-  --line: #D0CCC3;
-  --border: #D0CCC3;
-  --accent: #C9A227;
-  --accent-glow: rgba(201, 162, 39, 0.25);
-  --accent-dim: rgba(201, 162, 39, 0.10);
-  --accent-text: #A6800C;
+  --line: rgba(193, 68, 14, 0.2);
+  --border: rgba(193, 68, 14, 0.2);
+  --accent: #C1440E;
+  --accent-hover: #D94F15;
+  --accent-glow: rgba(193, 68, 14, 0.15);
+  --accent-dim: rgba(193, 68, 14, 0.10);
+  --accent-border: rgba(193, 68, 14, 0.35);
+  --accent-text: #A62408;
   --danger: #B84654;
   --dangerMuted: rgba(184, 70, 84, 0.15);
 }
@@ -44,17 +48,54 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg);
+  background-color: #0c0c0c;
   background-image:
-    /* Radial glows — warm amber tones, no purple */
-    radial-gradient(ellipse at 20% 0%, rgba(212, 160, 23, 0.08) 0%, transparent 60%),
-    /* Grid lines */
-    repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(212, 160, 23, 0.05) 47px, rgba(212, 160, 23, 0.05) 48px),
-    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(212, 160, 23, 0.05) 47px, rgba(212, 160, 23, 0.05) 48px);
+    linear-gradient(rgba(193, 68, 14, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(193, 68, 14, 0.08) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(193, 68, 14, 0.03) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(193, 68, 14, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, rgba(193, 68, 14, 0.12) 1px, transparent 1px);
+  background-size: 3px 100%;
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 30%, transparent 80%);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(193, 68, 14, 0.4);
+  border-radius: var(--radius-btn);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(193, 68, 14, 0.5) !important;
 }
 
 body::after {
@@ -64,7 +105,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   background: repeating-linear-gradient(0deg, transparent 0px, transparent 10px,
-      rgba(212, 160, 23, 0.03) 10px, rgba(212, 160, 23, 0.03) 12px);
+      rgba(193, 68, 14, 0.03) 10px, rgba(193, 68, 14, 0.03) 12px);
   z-index: 10;
 }
 

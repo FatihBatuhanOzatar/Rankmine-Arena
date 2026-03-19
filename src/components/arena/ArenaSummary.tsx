@@ -45,14 +45,14 @@ export const ArenaSummary = memo(function ArenaSummary() {
                 <div style={{ marginTop: '12px' }}>
                     {/* Overall Winner */}
                     {summary.overallWinner ? (
-                        <div className="winner-glow" style={{ padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        <div className="winner-glow" style={{ padding: '16px 12px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center', background: 'rgba(232,197,71,0.06)' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, marginBottom: '8px' }}>
                                 {summary.isTied ? 'Tied at Top' : 'Overall Winner'}
                             </div>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--accent-text)' }}>
-                                🏆 {summary.overallWinner.contestantName}
+                            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--accent-text)', marginBottom: '8px', lineHeight: 1.1 }}>
+                                👑 {summary.overallWinner.contestantName}
                             </div>
-                            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                            <div style={{ fontSize: '14px', color: 'var(--accent-text)', opacity: 0.9, fontWeight: 500 }}>
                                 {activeCompetition?.isWeighted ? summary.overallWinner.weightedTotal : summary.overallWinner.totalScore} pts
                             </div>
                         </div>
@@ -76,16 +76,17 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {summary.contestantStats.map(cs => (
+                                {summary.contestantStats.map((cs, i) => (
                                     <tr
                                         key={cs.contestantId}
                                         style={{
                                             borderBottom: '1px solid var(--border)',
+                                            background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
                                             opacity: (activeCompetition?.isWeighted ? cs.weightedTotal : cs.totalScore) > 0 || cs.averageScore > 0 ? 1 : 0.5
                                         }}
                                     >
                                         <td style={{
-                                            padding: '5px 6px',
+                                            padding: '8px 6px',
                                             maxWidth: '100px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -93,13 +94,13 @@ export const ArenaSummary = memo(function ArenaSummary() {
                                         }}>
                                             {cs.contestantName}
                                         </td>
-                                        <td style={{ padding: '5px 6px', textAlign: 'center' }}>
+                                        <td style={{ padding: '8px 6px', textAlign: 'center' }}>
                                             {cs.roundsWon}
                                         </td>
-                                        <td style={{ padding: '5px 6px', textAlign: 'center' }}>
+                                        <td style={{ padding: '8px 6px', textAlign: 'center' }}>
                                             {cs.averageScore}
                                         </td>
-                                        <td style={{ padding: '5px 6px', textAlign: 'right', fontWeight: 600, color: 'var(--accent-text)' }}>
+                                        <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 600, color: 'var(--accent-text)' }}>
                                             {activeCompetition?.isWeighted ? cs.weightedTotal : cs.totalScore}
                                         </td>
                                     </tr>

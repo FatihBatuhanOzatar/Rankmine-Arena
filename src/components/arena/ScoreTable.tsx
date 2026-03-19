@@ -140,7 +140,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
     const { scoreMin: min, scoreMax: max, scoreStep: step, scoringMode: mode } = activeCompetition;
 
     return (
-        <div className={`score-table-wrapper ${isCompact ? 'grid--compact' : ''}`} style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg)', ...{ '--drag-accent': 'rgba(201, 162, 39, 0.75)' } } as React.CSSProperties}>
+        <div className={`score-table-wrapper ${isCompact ? 'grid--compact' : ''}`} style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg)', ...{ '--drag-accent': 'rgba(193, 68, 14, 0.75)' } } as React.CSSProperties}>
             <style>
                 {`
                 .score-table {
@@ -192,7 +192,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
                 `}
             </style>
             <table className="score-table">
-                <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel)', borderBottom: '1px solid var(--border)' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: '#181818', borderBottom: '2px solid rgba(193,68,14,0.4)' }}>
                     <tr>
                         <th className="col-round" style={{ padding: '12px', textAlign: 'left', borderRight: '1px solid var(--border)' }}>
                             Round / Prompt

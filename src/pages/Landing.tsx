@@ -54,30 +54,43 @@ export default function Landing() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '800px', paddingTop: '40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
-                <div className="card">
-                    <h2>New Empty Arena</h2>
-                    <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>Start from scratch with no contestants or prompts.</p>
-                    <button className="btnPrimary" onClick={handleCreateEmpty}>Create New</button>
+        <div className="container" style={{ maxWidth: '800px', paddingTop: '40px', position: 'relative' }}>
+            {/* Background Wordmark Removed */}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px', marginBottom: '60px' }}>
+                <div 
+                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#181818', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(193,68,14,0.5)'; e.currentTarget.style.background = '#1c1c1c'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#181818'; }}
+                    onClick={handleCreateEmpty}
+                >
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#fff', fontWeight: 'bold' }}>New Empty Arena</h2>
+                    <p style={{ color: 'var(--muted)', marginBottom: '24px', fontSize: '14px' }}>Start from scratch with no contestants or prompts.</p>
+                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: '#C1440E', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleCreateEmpty}>Create New</button>
                 </div>
 
-                <div className="card">
-                    <h2>AI Image Models Battle</h2>
-                    <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>Load a pre-configured template with 5 models and 5 prompts.</p>
-                    <button className="btn" onClick={handleLoadTemplate}>Load Template</button>
+                <div 
+                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#181818', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(193,68,14,0.5)'; e.currentTarget.style.background = '#1c1c1c'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#181818'; }}
+                    onClick={handleLoadTemplate}
+                >
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#fff', fontWeight: 'bold' }}>AI Image Models Battle</h2>
+                    <p style={{ color: 'var(--muted)', marginBottom: '24px', fontSize: '14px' }}>Load a pre-configured template with 5 models and 5 prompts.</p>
+                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: '#C1440E', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleLoadTemplate}>Load Template</button>
                 </div>
             </div>
 
             {templates.length > 0 && (
                 <>
-                    <h2>Templates</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
+                    <h2 style={{ fontSize: '1.1rem', color: '#666', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Templates</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', marginBottom: '40px' }}>
                         {templates.map(t => (
                             <div
                                 key={t.id}
-                                className="card recent-battle-card"
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: '#141414', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1a1a'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#141414'; }}
                                 onClick={async () => {
                                     const newId = await createCompetitionFromTemplate(t.id);
                                     navigate(`/arena/${newId}`);
@@ -92,12 +105,14 @@ export default function Landing() {
                                 }}
                             >
                                 <div>
-                                    <h3 style={{ margin: '0 0 4px 0' }}>{t.name}</h3>
-                                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Format Template • Updated: {new Date(t.updatedAt).toLocaleDateString()}</div>
+                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#fff', fontWeight: 500 }}>{t.name}</h3>
+                                    <div style={{ fontSize: '12px', color: '#555' }}>Format Template • Updated: {new Date(t.updatedAt).toLocaleDateString()}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
-                                        className="btn-danger"
+                                        style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#C1440E' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.color = '#666' }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDelete('template', t.id, t.name);
@@ -112,16 +127,17 @@ export default function Landing() {
                 </>
             )}
 
-            <h2>Recent Battles</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '1.1rem', color: '#666', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Recent Battles</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0', marginBottom: '40px' }}>
                 {competitions.length === 0 ? (
                     <p style={{ color: 'var(--muted)' }}>No recent competitions.</p>
                 ) : (
                     competitions.map(c => (
                         <div
                             key={c.id}
-                            className="card recent-battle-card"
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: '#141414', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1a1a'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#141414'; }}
                             onClick={() => navigate(`/arena/${c.id}`)}
                             tabIndex={0}
                             onKeyDown={(e) => {
@@ -132,12 +148,14 @@ export default function Landing() {
                             }}
                         >
                             <div>
-                                <h3 style={{ margin: '0 0 4px 0' }}>{c.title}</h3>
-                                <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Updated: {new Date(c.updatedAt).toLocaleString()}</div>
+                                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#fff', fontWeight: 500 }}>{c.title}</h3>
+                                <div style={{ fontSize: '12px', color: '#555' }}>Updated: {new Date(c.updatedAt).toLocaleString()}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
-                                    className="btn-danger"
+                                    style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = '#C1440E' }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = '#666' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleDelete('competition', c.id, c.title);
@@ -151,14 +169,13 @@ export default function Landing() {
                 )}
             </div>
 
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <h3 style={{ margin: 0 }}>Import Backup</h3>
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0.85 }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--muted)' }}>Import Backup</h3>
                 <input type="file" accept=".json" onChange={handleImport} style={{ color: 'var(--text)', background: 'transparent' }} />
             </div>
 
-            <div className="public-listing-section">
-                <h2>Explore Community Arenas</h2>
-                <p style={{ color: 'var(--muted)', marginBottom: '24px' }}>Discover battles published by others.</p>
+            <div className="public-listing-section" style={{ marginTop: '24px' }}>
+                <h2 style={{ fontSize: '1.1rem', color: 'var(--muted)', fontWeight: 500, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px' }}>Explore Community Arenas</h2>
                 <PublicArenaList />
             </div>
 

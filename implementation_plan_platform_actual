@@ -1,0 +1,127 @@
+# Public Arena Discovery / Listing Feature
+
+Add a public discovery surface so visitors can browse recently published arenas without needing a direct link. Clicking a listed arena opens the existing `/p/:slug` read-only page.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Schema migration needed.** Three new columns (`title`, `contestant_count`, `round_count`) must be added to the existing `published_arenas` table in Supabase. This is a **manual SQL migration** — I will provide the exact SQL, but you must run it in the Supabase dashboard before the feature works.
+
+> [!NOTE]
+> Previously published arenas (before this migration) will have `NULL` values for the new columns. The listing UI will handle these gracefully by showing fallback text.
+
+---
+
+## Proposed Changes
+
+### Supabase Schema
+
+#### SQL migration (run manually in Supabase SQL editor):
+
+```sql
+ALTER TABLE published_arenas
+  ADD COLUMN IF NOT EXISTS title text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contestant_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS round_count integer NOT NULL DEFAULT 0;
+```
+
+---
+
+### API Layer
+
+#### [MODIFY] [publish.ts](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/api/publish.ts)
+
+1. **Update [publishArena()](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/api/publish.ts#6-18)** — insert `title`, `contestant_count`, and `round_count` alongside `slug` and `payload`. Extract these from the payload argument.
+
+2. **Add `PublishedArenaListItem` type** — lightweight type for listing cards (no full payload):
+   - `slug`, `title`, `created_at`, `contestant_count`, `round_count`
+
+3. **Add `fetchRecentPublishedArenas(limit?: number)`** — queries `published_arenas` ordered by `created_at desc`, selecting only listing-card fields (no `payload`). Default limit: 12.
+
+---
+
+### New Components
+
+#### [NEW] [PublicArenaCard.tsx](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/components/PublicArenaCard.tsx)
+
+Reusable card component for a single published arena listing entry:
+- Props: `slug`, `title`, `createdAt`, `contestantCount`, `roundCount`
+- Displays: title, publish date (formatted), contestant/round counts, "View Arena →" CTA
+- Wraps in a `<Link>` to `/p/:slug`
+- Uses existing design tokens (amber-on-dark identity)
+
+#### [NEW] [PublicArenaList.tsx](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/components/PublicArenaList.tsx)
+
+Self-contained listing component:
+- Fetches recent arenas on mount via `fetchRecentPublishedArenas()`
+- Manages loading / error / empty states internally
+- Renders a grid of `PublicArenaCard` instances
+- Reusable: could later be placed on a dedicated `/discover` page
+
+---
+
+### Landing Integration
+
+#### [MODIFY] [Landing.tsx](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/pages/Landing.tsx)
+
+Add a new "Explore Community Arenas" section below the existing organizer content. Renders `<PublicArenaList />`. No logic changes to existing organizer flows.
+
+---
+
+### Styles
+
+#### [MODIFY] [components.css](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/src/components.css)
+
+Add styles for:
+- `.public-listing-section` — section wrapper with top border separator
+- `.public-listing-grid` — responsive CSS grid for cards
+- `.public-arena-card` — card styling (border, hover glow, transition)
+- `.public-arena-card-title` — title styling
+- `.public-arena-card-meta` — date/counts row
+- `.public-arena-card-cta` — "View Arena →" link styling
+
+---
+
+### Documentation
+
+#### [MODIFY] [PROGRESS.md](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/PROGRESS.md)
+
+Add Phase 6 — Public Arena Discovery section documenting:
+- Listing of recently published arenas on Landing page
+- Schema extension with metadata columns
+- `fetchRecentPublishedArenas()` API function
+- Reusable card/list components
+
+#### [MODIFY] [BACKLOG.md](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/BACKLOG.md)
+
+Add Phase 6 deferred items:
+- Dedicated `/discover` page
+- Pagination / infinite scroll
+- Search / filter
+- Categories / tags
+
+#### [MODIFY] [DECISIONS.md](file:///c:/Users/Batzatar/Desktop/Rankmine%20Arena/DECISIONS.md)
+
+Add decision: "Public Discovery — Listing-Only MVP" documenting the lightweight metadata column approach vs. parsing payload.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+1. **TypeScript check:** `npx tsc --noEmit`
+2. **Build:** `npm run build`
+3. **Unit tests:** `npx vitest run`
+
+### Browser Verification
+
+After running `npm run dev`, manually verify:
+
+1. **Landing page loads** — the "Explore Community Arenas" section appears below existing organizer content
+2. **Empty state** — if no published arenas exist, a friendly empty message is shown
+3. **With published arenas** — cards show title, date, contestant count, round count, and "View Arena →"
+4. **Card click** — clicking a card navigates to `/p/:slug` and the existing public page works
+5. **Ordering** — newest arenas appear first
+6. **Existing flows unchanged** — creating, editing, publishing from the organizer side still works
+7. **Error state** — if Supabase env vars are missing/wrong, a graceful error message appears instead of a crash

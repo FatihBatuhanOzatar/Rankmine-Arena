@@ -157,7 +157,7 @@ export const ScoreCell = memo(function ScoreCell({
 
     return (
         <td
-            className={isWinner ? 'round-winner-cell' : ''}
+            className={`${val === '' ? 'empty-score-cell' : ''} ${isWinner ? 'round-winner-cell' : ''}`}
             style={{ border: '1px solid var(--border)', padding: '0', textAlign: 'center', position: 'relative' }}
         >
             {mode === 'numeric' && (
