@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import logoUrlDark from '../assets/rankminelogo.png';
 import logoUrlLight from '../assets/rankminelogo_dark.png';
-import { fetchPublishedArena } from '../api/publish';
+import { fetchPublishedArena, likeArena, unlikeArena } from '../api/publish';
 import { fetchSubmissions, submitJuryScores } from '../api/submissions';
 import type { PublishedArenaPayload } from '../domain/publishedArena';
 import type { JurySubmissionPayload, JurySubmissionRow } from '../domain/submissions';
@@ -32,6 +32,15 @@ export default function PublicArena() {
             return !!(localStorage.getItem(SUBMITTED_KEY(slug)) || sessionStorage.getItem(SUBMITTED_KEY(slug)));
         } catch { return false; }
     });
+
+    // Like state
+    const [liked, setLiked] = useState<boolean>(() => {
+        if (!slug) return false;
+        try { return localStorage.getItem(`rm_liked_${slug}`) === '1'; } catch { return false; }
+    });
+    const [likeCount, setLikeCount] = useState(0);
+    const [isLiking, setIsLiking] = useState(false);
+    const [showReportDone, setShowReportDone] = useState(false);
 
     // ── Fetch published arena + submissions ──────────────────────────
     useEffect(() => {
@@ -97,6 +106,36 @@ export default function PublicArena() {
     if (status === 'error') return <PublicShell><ErrorView message={errorMsg} /></PublicShell>;
     if (!payload) return null;
 
+    const handleLikeToggle = useCallback(async () => {
+        if (!slug || isLiking) return;
+        setIsLiking(true);
+        try {
+            if (liked) {
+                await unlikeArena(slug);
+                localStorage.removeItem(`rm_liked_${slug}`);
+                setLiked(false);
+                setLikeCount(c => Math.max(0, c - 1));
+            } else {
+                await likeArena(slug);
+                localStorage.setItem(`rm_liked_${slug}`, '1');
+                setLiked(true);
+                setLikeCount(c => c + 1);
+            }
+        } catch { /* ignore */ }
+        setIsLiking(false);
+    }, [slug, liked, isLiking]);
+
+    const handleReport = useCallback(() => {
+        if (!slug) return;
+        const reported = JSON.parse(localStorage.getItem('rm_reported_slugs') || '[]');
+        if (!reported.includes(slug)) {
+            reported.push(slug);
+            localStorage.setItem('rm_reported_slugs', JSON.stringify(reported));
+        }
+        setShowReportDone(true);
+        setTimeout(() => setShowReportDone(false), 3000);
+    }, [slug]);
+
     return (
         <PublicShell>
             {viewMode === 'jury' ? (
@@ -113,6 +152,12 @@ export default function PublicArena() {
                     submissions={submissions}
                     onJuryClick={() => setViewMode('jury')}
                     alreadySubmitted={alreadySubmitted}
+                    liked={liked}
+                    likeCount={likeCount}
+                    isLiking={isLiking}
+                    onLikeToggle={handleLikeToggle}
+                    onReport={handleReport}
+                    showReportDone={showReportDone}
                 />
             )}
         </PublicShell>
@@ -205,9 +250,15 @@ interface PublicArenaContentProps {
     submissions: JurySubmissionRow[];
     onJuryClick: () => void;
     alreadySubmitted: boolean;
+    liked: boolean;
+    likeCount: number;
+    isLiking: boolean;
+    onLikeToggle: () => void;
+    onReport: () => void;
+    showReportDone: boolean;
 }
 
-function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitted }: PublicArenaContentProps) {
+function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitted, liked, likeCount, isLiking, onLikeToggle, onReport, showReportDone }: PublicArenaContentProps) {
     const { competition, contestants, rounds, entries } = payload;
     const hasJurySubmissions = submissions.length > 0;
 
@@ -317,15 +368,48 @@ function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitte
         <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
             {/* Title */}
             <div style={{ marginBottom: '24px' }}>
-                <h1 style={{ margin: 0, fontSize: '1.6rem' }}>{competition.title}</h1>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className="chip">
-                        Score: {competition.scoreMin} – {competition.scoreMax}
-                        {competition.scoreUnit ? ` ${competition.scoreUnit}` : ''}
-                    </span>
-                    <span className="chip">{competition.scoringMode}</span>
-                    {competition.isWeighted && <span className="chip">Weighted</span>}
-                    {competition.locked && <span className="chip">🏁 Locked</span>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: '1.6rem' }}>{competition.title}</h1>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span className="chip">
+                                Score: {competition.scoreMin} – {competition.scoreMax}
+                                {competition.scoreUnit ? ` ${competition.scoreUnit}` : ''}
+                            </span>
+                            <span className="chip">{competition.scoringMode}</span>
+                            {competition.isWeighted && <span className="chip">Weighted</span>}
+                            {competition.locked && <span className="chip">Locked</span>}
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                        <button
+                            onClick={onLikeToggle}
+                            disabled={isLiking}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '6px 14px', borderRadius: '6px',
+                                border: liked ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                background: liked ? 'rgba(193,68,14,0.15)' : 'transparent',
+                                color: liked ? 'var(--accent)' : 'var(--muted)',
+                                cursor: isLiking ? 'wait' : 'pointer',
+                                fontSize: '13px', fontWeight: 600, transition: 'all 0.2s'
+                            }}
+                        >
+                            <span style={{ fontSize: '16px' }}>{liked ? '\u2665' : '\u2661'}</span>
+                            {likeCount > 0 && likeCount}
+                        </button>
+                        <button
+                            onClick={onReport}
+                            title="Report this arena"
+                            style={{
+                                padding: '6px 10px', borderRadius: '6px',
+                                border: '1px solid var(--border)', background: 'transparent',
+                                color: 'var(--muted)', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s'
+                            }}
+                        >
+                            {showReportDone ? 'Reported' : 'Report'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
