@@ -12,6 +12,7 @@ export async function publishArena(
     const finalPayload = { ...payload, entries: [...payload.entries] };
 
     let skippedAssets = 0;
+    const previewUrls: string[] = [];
 
     // Upload local assets to Supabase storage
     for (let i = 0; i < finalPayload.entries.length; i++) {
@@ -37,6 +38,10 @@ export async function publishArena(
                         ...entry,
                         publicAssetUrl: data.publicUrl
                     };
+                    
+                    if (previewUrls.length < 4) {
+                        previewUrls.push(data.publicUrl);
+                    }
                 } else {
                     skippedAssets++;
                 }
@@ -53,7 +58,8 @@ export async function publishArena(
             payload: finalPayload,
             title: finalPayload.competition.title,
             contestant_count: finalPayload.contestants.length,
-            round_count: finalPayload.rounds.length
+            round_count: finalPayload.rounds.length,
+            preview_urls: previewUrls
         });
 
     if (error) {
@@ -96,22 +102,93 @@ export interface PublishedArenaListItem {
     created_at: string;
     contestant_count: number;
     round_count: number;
+    preview_urls: string[];
+    submission_count?: number;
+    like_count?: number;
 }
 
 export async function fetchRecentPublishedArenas(
-    limit: number = 12
+    limit: number = 12,
+    sortBy: 'newest' | 'most_rated' = 'newest'
 ): Promise<PublishedArenaListItem[]> {
-    const { data, error } = await getSupabase()
-        .from('published_arenas')
-        // Select only the columns needed for listing (exclude payload)
-        .select('slug, title, created_at, contestant_count, round_count')
-        .order('created_at', { ascending: false })
+    let query = getSupabase()
+        .rpc('get_explore_arenas')
         .limit(limit);
+
+    if (sortBy === 'most_rated') {
+        query = query.order('submission_count', { ascending: false }).order('created_at', { ascending: false });
+    } else {
+        query = query.order('created_at', { ascending: false });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         throw new Error(`Fetch listing failed: ${error.message}`);
     }
 
-    return data as PublishedArenaListItem[];
+    // Filter out locally banished (unpublished) slugs just in case Supabase RLS blocked deletion
+    const banishedStr = localStorage.getItem('rm_banished_slugs');
+    let banished: string[] = [];
+    if (banishedStr) {
+        try { banished = JSON.parse(banishedStr) } catch {}
+    }
+    
+    return ((data || []) as PublishedArenaListItem[]).filter(item => !banished.includes(item.slug));
 }
 
+export async function unpublishArena(slug: string): Promise<void> {
+    const { error } = await getSupabase()
+        .from('published_arenas')
+        .delete()
+        .eq('slug', slug);
+
+    if (error) {
+        console.warn(`Unpublish delete failed remotely (likely RLS): ${error.message}`);
+    }
+
+    // Add to local banished list so user doesn't see it in Explore section
+    const banishedStr = localStorage.getItem('rm_banished_slugs');
+    let banished: string[] = [];
+    if (banishedStr) {
+        try { banished = JSON.parse(banishedStr) } catch {}
+    }
+    if (!banished.includes(slug)) {
+        banished.push(slug);
+        localStorage.setItem('rm_banished_slugs', JSON.stringify(banished));
+    }
+}
+
+// ── Likes ───────────────────────────────────────────────────────────
+
+function getClientId(): string {
+    let cid = localStorage.getItem('rm_client_id');
+    if (!cid) {
+        cid = crypto.randomUUID();
+        localStorage.setItem('rm_client_id', cid);
+    }
+    return cid;
+}
+
+export async function likeArena(slug: string): Promise<void> {
+    const client_id = getClientId();
+    const { error } = await getSupabase()
+        .from('arena_likes')
+        .insert({ arena_slug: slug, client_id });
+
+    if (error && error.code !== '23505') { // ignore duplicate key
+        console.warn(`Like failed: ${error.message}`);
+    }
+}
+
+export async function unlikeArena(slug: string): Promise<void> {
+    const client_id = getClientId();
+    const { error } = await getSupabase()
+        .from('arena_likes')
+        .delete()
+        .match({ arena_slug: slug, client_id });
+
+    if (error) {
+        console.warn(`Unlike failed: ${error.message}`);
+    }
+}
