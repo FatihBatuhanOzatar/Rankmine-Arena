@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
@@ -12,7 +12,7 @@ import { SaveTemplateModal } from '../components/arena/SaveTemplateModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { exportCompetition } from '../io';
 import { buildPublishedPayload } from '../domain/publishedArena';
-import { publishArena } from '../api/publish';
+import { publishArena, unpublishArena } from '../api/publish';
 import { showToast } from '../components/Toast';
 
 export default function Arena() {
@@ -31,6 +31,7 @@ export default function Arena() {
 
     const [isCompact, setIsCompact] = useState(() => localStorage.getItem('rm_compact_mode') === 'true');
     const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid');
+    const [showAllImages, setShowAllImages] = useState(false);
 
     // Phase 4: Reveal Mode
     const [revealMode, setRevealMode] = useState<'live' | 'reveal'>('live');
@@ -43,8 +44,10 @@ export default function Arena() {
     const rounds = useStore(s => s.rounds);
     const entriesById = useStore(s => s.entriesById);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isUnpublishing, setIsUnpublishing] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
     const [showExportConfirm, setShowExportConfirm] = useState(false);
+    const [showUnpublishConfirm, setShowUnpublishConfirm] = useState(false);
     const [missingImagesDialogCount, setMissingImagesDialogCount] = useState(0);
 
     const publishedSlug = activeCompetition?.publishedSlug ?? null;
@@ -53,19 +56,26 @@ export default function Arena() {
     const handlePublish = useCallback(async () => {
         if (!activeCompetition || isPublishing) return;
 
-        // Verify cell images
-        let missing = 0;
-        for (const r of rounds) {
-            for (const c of contestants) {
-                const entry = entriesById[`${activeCompetition.id}::${r.id}::${c.id}`];
-                if (!entry?.assetId) missing++;
+        // Rate limit 60s
+        const lastPublishStr = localStorage.getItem('rm_last_publish');
+        if (lastPublishStr) {
+            const lastTime = parseInt(lastPublishStr);
+            if (Date.now() - lastTime < 60000) {
+                 showToast('Please wait a minute before publishing another arena.', 'error');
+                 return;
+            }
+            
+            // Daily limit constraint optionally
+            const dailyStr = localStorage.getItem('rm_daily_publishes');
+            let daily = dailyStr ? JSON.parse(dailyStr) : { date: new Date().toLocaleDateString(), count: 0 };
+            if (daily.date !== new Date().toLocaleDateString()) {
+                daily = { date: new Date().toLocaleDateString(), count: 0 };
+            }
+            if (daily.count >= 5) {
+                showToast('Daily publish limit reached (Max 5). Try again tomorrow.', 'error');
+                return;
             }
         }
-        if (missing > 0) {
-            setMissingImagesDialogCount(missing);
-            return;
-        }
-
         setIsPublishing(true);
         setPublishError(null);
         try {
@@ -75,6 +85,15 @@ export default function Arena() {
             const result = await publishArena(payload, slug);
             await updateCompetition(activeCompetition.id, { publishedSlug: slug, publishedAt: Date.now() });
             showToast('Arena published successfully!', 'success');
+            
+            // Record limit
+            localStorage.setItem('rm_last_publish', Date.now().toString());
+            const dailyStr = localStorage.getItem('rm_daily_publishes');
+            let daily = dailyStr ? JSON.parse(dailyStr) : { date: new Date().toLocaleDateString(), count: 0 };
+            if (daily.date !== new Date().toLocaleDateString()) daily = { date: new Date().toLocaleDateString(), count: 0 };
+            daily.count++;
+            localStorage.setItem('rm_daily_publishes', JSON.stringify(daily));
+
             if (result?.skippedAssets && result.skippedAssets > 0) {
                 showToast(`${result.skippedAssets} image(s) could not be uploaded`, 'warning');
             }
@@ -87,6 +106,23 @@ export default function Arena() {
             setIsPublishing(false);
         }
     }, [activeCompetition, contestants, rounds, entriesById, isPublishing, updateCompetition]);
+
+    const handleUnpublish = useCallback(async () => {
+        if (!activeCompetition || !publishedSlug || isUnpublishing) return;
+        setIsUnpublishing(true);
+        try {
+            await unpublishArena(publishedSlug);
+            await updateCompetition(activeCompetition.id, { publishedSlug: undefined, publishedAt: undefined });
+            showToast('Arena unpublished successfully.', 'success');
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Unpublish failed';
+            setPublishError(msg);
+            setTimeout(() => setPublishError(prev => prev === msg ? null : prev), 8000);
+        } finally {
+            setIsUnpublishing(false);
+            setShowUnpublishConfirm(false);
+        }
+    }, [activeCompetition, publishedSlug, isUnpublishing, updateCompetition]);
 
     const handleExport = useCallback(async () => {
         if (!activeCompetition) return;
@@ -133,6 +169,31 @@ export default function Arena() {
             }, 80);
         });
     }, []);
+
+    // Computed Quality Gate Check
+    const publishGate = useMemo(() => {
+        const res = { disabled: false, reason: '' };
+        if (!activeCompetition) return { disabled: true, reason: 'Loading...' };
+
+        if (!activeCompetition.title || activeCompetition.title.length < 5) return { disabled: true, reason: 'Title must be at least 5 characters' };
+        if (/^(New Competition|Untitled Arena)( \d+)?$/.test(activeCompetition.title)) return { disabled: true, reason: 'Please give your arena a custom title' };
+        if (contestants.length < 2) return { disabled: true, reason: 'At least 2 contestants required' };
+        if (rounds.length < 1) return { disabled: true, reason: 'At least 1 round required' };
+        
+        let missingScore = 0;
+        let missingImage = 0;
+        for (const r of rounds) {
+            for (const c of contestants) {
+                const entry = entriesById[`${activeCompetition.id}::${r.id}::${c.id}`];
+                if (!entry || entry.score === undefined) missingScore++;
+                if (!entry || !entry.assetId) missingImage++;
+            }
+        }
+        if (missingScore > 0) return { disabled: true, reason: `Missing scores in ${missingScore} cell(s)` };
+        if (missingImage > 0) return { disabled: true, reason: `Missing images in ${missingImage} cell(s)` };
+        
+        return res;
+    }, [activeCompetition, contestants, rounds, entriesById]);
 
     const dismissTip = () => {
         localStorage.setItem('arenaTipsSeen', 'true');
@@ -300,6 +361,23 @@ export default function Arena() {
                             >Reveal</button>
                         </div>
 
+                        {/* Show All Images Toggle (only useful in grid) */}
+                        {viewMode === 'grid' && (
+                            <button
+                                className="btn"
+                                onClick={() => setShowAllImages(v => !v)}
+                                title={showAllImages ? "Hide cell images" : "Show cell images"}
+                                style={{ padding: '0 8px', display: 'flex', alignItems: 'center', height: '26px', background: showAllImages ? 'var(--accent)' : 'transparent', color: showAllImages ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '4px', fontSize: '13px' }}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                {showAllImages ? 'Hide Images' : 'Show Images'}
+                            </button>
+                        )}
+
                         {/* Layout Icon Button */}
                         <button
                             className="btn"
@@ -369,17 +447,39 @@ export default function Arena() {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                                     Copy Link
                                 </button>
+                                <button
+                                    className="btn"
+                                    onClick={() => setShowUnpublishConfirm(true)}
+                                    disabled={isUnpublishing}
+                                    title="Unpublish Arena"
+                                    style={{ fontSize: '12px', fontWeight: 500, background: 'transparent', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: '4px', opacity: isUnpublishing ? 0.5 : 1 }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                                    {isUnpublishing ? 'Unpublishing...' : 'Unpublish'}
+                                </button>
                             </div>
                         ) : (
-                            <button
-                                className="btn"
-                                onClick={handlePublish}
-                                disabled={isPublishing}
-                                style={{ fontSize: '12px', fontWeight: 500, background: 'transparent', border: 'none', padding: 0, opacity: isPublishing ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                {isPublishing ? 'Publishing…' : 'Publish'}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {publishGate.disabled && (
+                                    <span style={{ color: 'var(--danger)', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                        {publishGate.reason}
+                                    </span>
+                                )}
+                                <button
+                                    className="btn"
+                                    onClick={handlePublish}
+                                    disabled={isPublishing || publishGate.disabled}
+                                    title={publishGate.reason || "Publish to Community"}
+                                    style={{ 
+                                        fontSize: '12px', fontWeight: 500, background: 'transparent', border: 'none', padding: 0, 
+                                        opacity: (isPublishing || publishGate.disabled) ? 0.3 : 1, display: 'flex', alignItems: 'center', gap: '4px',
+                                        cursor: publishGate.disabled ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    {isPublishing ? 'Publishing…' : 'Publish'}
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -411,6 +511,14 @@ export default function Arena() {
                 confirmLabel="Export"
                 onConfirm={handleExport}
                 onCancel={() => setShowExportConfirm(false)}
+            />
+            <ConfirmDialog
+                isOpen={showUnpublishConfirm}
+                title="Unpublish Arena"
+                body={<>This will remove the arena from public discovery and invalidate the shared link. Your local workspace will remain intact.</>}
+                confirmLabel="Unpublish"
+                onConfirm={handleUnpublish}
+                onCancel={() => setShowUnpublishConfirm(false)}
             />
             <ConfirmDialog
                 isOpen={missingImagesDialogCount > 0}
@@ -528,7 +636,7 @@ export default function Arena() {
                                     transition: 'margin-left 250ms ease'
                                 }}
                             >
-                                <ScoreTable isCompact={isCompact} locked={locked} />
+                                <ScoreTable isCompact={isCompact} locked={locked} showImages={showAllImages} />
                             </div>
                         </>
                     ) : (

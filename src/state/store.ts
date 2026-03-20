@@ -60,6 +60,16 @@ export interface ArenaState {
 // Timeout helper for db queueing
 let flushTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+function getUniqueTitle(baseTitle: string, comps: Competition[], ignoreId?: string): string {
+    let title = baseTitle;
+    let counter = 1;
+    while (comps.some(c => c.id !== ignoreId && c.title === title)) {
+        title = `${baseTitle} ${counter}`;
+        counter++;
+    }
+    return title;
+}
+
 export const useStore = create<ArenaState>((set, get) => ({
     competitions: [],
     templates: [],
@@ -117,9 +127,11 @@ export const useStore = create<ArenaState>((set, get) => ({
         const compId = crypto.randomUUID();
         const now = Date.now();
 
+        const uniqueTitle = getUniqueTitle(t.name, get().competitions);
+
         const newComp: Competition = {
             id: compId,
-            title: t.name,
+            title: uniqueTitle,
             scoreMin: t.scoring.scoreMin,
             scoreMax: t.scoring.scoreMax,
             scoreStep: t.scoring.scoreStep,
@@ -182,9 +194,11 @@ export const useStore = create<ArenaState>((set, get) => ({
     createCompetition: async (title: string) => {
         const id = crypto.randomUUID();
         const now = Date.now();
+        const uniqueTitle = getUniqueTitle(title, get().competitions);
+
         const c: Competition = {
             id,
-            title,
+            title: uniqueTitle,
             scoreMin: 0,
             scoreMax: 10,
             scoreStep: 1,
@@ -200,6 +214,8 @@ export const useStore = create<ArenaState>((set, get) => ({
 
     createFromTemplate: async () => {
         const { competition, contestants, rounds } = createAITemplateCombo();
+        competition.title = getUniqueTitle(competition.title, get().competitions);
+
         await repos.saveCompetition(competition);
         for (const c of contestants) await repos.saveContestant(c);
         for (const r of rounds) await repos.saveRound(r);
@@ -214,7 +230,12 @@ export const useStore = create<ArenaState>((set, get) => ({
     updateCompetition: async (id: string, partial: Partial<Competition>) => {
         const c = await repos.getCompetition(id);
         if (c) {
-            const updated = { ...c, ...partial, updatedAt: Date.now() };
+            let finalPartial = { ...partial };
+            if (partial.title) {
+                finalPartial.title = getUniqueTitle(partial.title, get().competitions, id);
+            }
+
+            const updated = { ...c, ...finalPartial, updatedAt: Date.now() };
             await repos.saveCompetition(updated);
 
             set(s => {
