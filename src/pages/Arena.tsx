@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { Leaderboard } from '../components/arena/Leaderboard';
 import { ArenaSummary } from '../components/arena/ArenaSummary';
@@ -9,12 +9,15 @@ import { ManageContestants } from '../components/arena/ManageContestants';
 import { ManageRounds } from '../components/arena/ManageRounds';
 import { ManageSettings } from '../components/arena/ManageSettings';
 import { SaveTemplateModal } from '../components/arena/SaveTemplateModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { exportCompetition } from '../io';
 import { buildPublishedPayload } from '../domain/publishedArena';
 import { publishArena } from '../api/publish';
+import { showToast } from '../components/Toast';
 
 export default function Arena() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const { loadArena, unloadArena, activeCompetition, updateCompetition, toggleLock } = useStore();
     const [showContestants, setShowContestants] = useState(false);
     const [showRounds, setShowRounds] = useState(false);
@@ -41,26 +44,60 @@ export default function Arena() {
     const entriesById = useStore(s => s.entriesById);
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
+    const [showExportConfirm, setShowExportConfirm] = useState(false);
+    const [missingImagesDialogCount, setMissingImagesDialogCount] = useState(0);
 
     const publishedSlug = activeCompetition?.publishedSlug ?? null;
     const publicUrl = publishedSlug ? `${window.location.origin}/p/${publishedSlug}` : null;
 
     const handlePublish = useCallback(async () => {
         if (!activeCompetition || isPublishing) return;
+
+        // Verify cell images
+        let missing = 0;
+        for (const r of rounds) {
+            for (const c of contestants) {
+                const entry = entriesById[`${activeCompetition.id}::${r.id}::${c.id}`];
+                if (!entry?.assetId) missing++;
+            }
+        }
+        if (missing > 0) {
+            setMissingImagesDialogCount(missing);
+            return;
+        }
+
         setIsPublishing(true);
         setPublishError(null);
         try {
             const entries = Object.values(entriesById);
             const payload = buildPublishedPayload(activeCompetition, contestants, rounds, entries);
             const slug = crypto.randomUUID().slice(0, 8);
-            await publishArena(payload, slug);
+            const result = await publishArena(payload, slug);
             await updateCompetition(activeCompetition.id, { publishedSlug: slug, publishedAt: Date.now() });
+            showToast('Arena published successfully!', 'success');
+            if (result?.skippedAssets && result.skippedAssets > 0) {
+                showToast(`${result.skippedAssets} image(s) could not be uploaded`, 'warning');
+            }
         } catch (err) {
-            setPublishError(err instanceof Error ? err.message : 'Publish failed');
+            const msg = err instanceof Error ? err.message : 'Publish failed';
+            setPublishError(msg);
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => setPublishError(prev => prev === msg ? null : prev), 8000);
         } finally {
             setIsPublishing(false);
         }
     }, [activeCompetition, contestants, rounds, entriesById, isPublishing, updateCompetition]);
+
+    const handleExport = useCallback(async () => {
+        if (!activeCompetition) return;
+        setShowExportConfirm(false);
+        try {
+            await exportCompetition(activeCompetition.id);
+            showToast('Export downloaded', 'success');
+        } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Export failed', 'error');
+        }
+    }, [activeCompetition]);
 
     const handleReveal = useCallback(() => {
         setIsRevealed(true);
@@ -109,8 +146,20 @@ export default function Arena() {
         return () => unloadArena();
     }, [id, loadArena, unloadArena]);
 
-    if (!id) return <div>No Arena ID</div>;
-    if (!activeCompetition) return <div className="container">Loading...</div>;
+    if (!id) return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px', color: 'var(--muted)' }}>
+            <div style={{ fontSize: '2.5rem' }}>🚫</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>No Arena Found</div>
+            <div style={{ fontSize: '14px' }}>This arena does not exist or the link is invalid.</div>
+            <button className="btn" onClick={() => navigate('/')}>← Back to Landing</button>
+        </div>
+    );
+    if (!activeCompetition) return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '12px' }}>
+            <div style={{ fontSize: '2rem', animation: 'toast-slide-in 0.5s ease' }}>⏳</div>
+            <div style={{ color: 'var(--muted)', fontSize: '14px' }}>Loading arena…</div>
+        </div>
+    );
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -119,8 +168,8 @@ export default function Arena() {
             <header style={{
                 display: 'flex',
                 flexDirection: 'column',
-                background: '#111111',
-                borderBottom: '1px solid rgba(255,255,255,0.06)'
+                background: 'var(--panel)',
+                borderBottom: '1px solid var(--border)'
             }}>
                 {/* Row 1: Arena Identity */}
                 <div style={{
@@ -185,7 +234,7 @@ export default function Arena() {
                         </span>
                     </div>
                     {/* Back to Landing */}
-                    <button className="btn" onClick={() => window.location.href = '/'} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '13px', padding: 0 }}>
+                    <button className="btn" onClick={() => navigate('/')} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '13px', padding: 0 }}>
                         ← Back to Landing
                     </button>
                 </div>
@@ -286,11 +335,7 @@ export default function Arena() {
                             style={{ opacity: locked ? 0.5 : 1, background: 'transparent', border: 'none', fontSize: '12px', fontWeight: 500, padding: 0 }}
                         >Manage Rounds</button>
                         <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.1)' }} />
-                        <button className="btn" onClick={async () => {
-                            if (confirm("Images are not included in JSON export. They remain local-only. Continue?")) {
-                                await exportCompetition(activeCompetition.id);
-                            }
-                        }} style={{ background: 'transparent', border: 'none', fontSize: '12px', fontWeight: 500, padding: 0 }}>Export JSON</button>
+                        <button className="btn" onClick={() => setShowExportConfirm(true)} style={{ background: 'transparent', border: 'none', fontSize: '12px', fontWeight: 500, padding: 0 }}>Export JSON</button>
                         
                         <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.1)' }} />
 
@@ -315,6 +360,7 @@ export default function Arena() {
                                     onClick={() => {
                                         if (publicUrl) {
                                             navigator.clipboard.writeText(publicUrl);
+                                            showToast('Link copied to clipboard!', 'success');
                                         }
                                     }}
                                     title={publicUrl ?? ''}
@@ -358,13 +404,48 @@ export default function Arena() {
             {showContestants && !locked && <ManageContestants onClose={() => setShowContestants(false)} />}
             {showRounds && !locked && <ManageRounds onClose={() => setShowRounds(false)} />}
             {showSettings && !locked && <ManageSettings onClose={() => setShowSettings(false)} />}
+            <ConfirmDialog
+                isOpen={showExportConfirm}
+                title="Export Arena"
+                body={<>Images are not included in JSON export. They remain local-only. Do you want to continue?</>}
+                confirmLabel="Export"
+                onConfirm={handleExport}
+                onCancel={() => setShowExportConfirm(false)}
+            />
+            <ConfirmDialog
+                isOpen={missingImagesDialogCount > 0}
+                title="Missing Images"
+                body={<>You cannot publish this arena yet. There {missingImagesDialogCount === 1 ? 'is' : 'are'} <strong>{missingImagesDialogCount}</strong> cell{missingImagesDialogCount !== 1 ? 's' : ''} missing an image.</>}
+                confirmLabel="Got it"
+                cancelLabel="Cancel"
+                onConfirm={() => setMissingImagesDialogCount(0)}
+                onCancel={() => setMissingImagesDialogCount(0)}
+            />
 
             {/* Main Layout */}
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', gap: '24px' }}>
                 {showTip && (
-                    <div style={{ padding: '12px 16px', background: 'var(--accent)', color: '#000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '12px 16px', background: 'var(--accent)', color: 'var(--bg)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span><strong>Tip:</strong> Use arrow keys to navigate. Drag row/column headers to reorder.</span>
-                        <button onClick={dismissTip} style={{ padding: '4px 12px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#000', fontWeight: 'bold' }}>Got it</button>
+                        <button onClick={dismissTip} style={{ padding: '4px 12px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'var(--bg)', fontWeight: 'bold' }}>Got it</button>
+                    </div>
+                )}
+                {/* Empty Arena Onboarding */}
+                {contestants.length === 0 && rounds.length === 0 && !locked && (
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '48px 24px', gap: '16px', textAlign: 'center',
+                        border: '1px dashed var(--border)', borderRadius: '8px', background: 'var(--panel)',
+                    }}>
+                        <div style={{ fontSize: '2.5rem' }}>⚔️</div>
+                        <h2 style={{ margin: 0, fontSize: '1.3rem' }}>Your arena is empty</h2>
+                        <p style={{ margin: 0, color: 'var(--muted)', maxWidth: '400px', fontSize: '14px' }}>
+                            Add contestants and rounds to start your battle. You can also load a template from the landing page.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                            <button className="btnPrimary" onClick={() => setShowContestants(true)} style={{ padding: '10px 20px' }}>+ Add Contestants</button>
+                            <button className="btn" onClick={() => setShowRounds(true)} style={{ padding: '10px 20px' }}>+ Add Rounds</button>
+                        </div>
                     </div>
                 )}
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
@@ -384,8 +465,8 @@ export default function Arena() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    background: '#161616',
-                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    background: 'var(--panel)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
                                     pointerEvents: 'auto',
