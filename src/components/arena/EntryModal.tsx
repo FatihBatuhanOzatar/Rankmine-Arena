@@ -221,13 +221,13 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max, st
                             padding: '12px 0 8px 0', fontSize: '13px', color: 'var(--muted)'
                         }}>
                             <div style={{ display: 'flex', gap: '16px' }}>
-                                {contestantName && <span>👤 {contestantName}</span>}
-                                {roundTitle && <span>📋 {roundTitle}</span>}
+                                {contestantName && <span>{contestantName}</span>}
+                                {roundTitle && <span>{roundTitle}</span>}
                                 {entry?.score !== undefined && <span>Score: <strong style={{ color: 'var(--text)' }}>{entry.score}</strong></span>}
                             </div>
                             {(entry?.note || entry?.link) && (
                                 <span style={{ opacity: 0.7 }}>
-                                    {entry.note ? '📝 Note' : ''}{entry.note && entry.link ? ' · ' : ''}{entry.link ? '🔗 Link' : ''}
+                                    {entry.note ? 'Note attached' : ''}{entry.note && entry.link ? ' · ' : ''}{entry.link ? 'Link attached' : ''}
                                 </span>
                             )}
                         </div>
@@ -243,17 +243,17 @@ export function EntryModal({ onClose, entry, roundId, contestantId, min, max, st
                                     setLink(entry?.link || '');
                                     setMode('edit');
                                 }}>
-                                    ✏️ Edit
+                                    Edit Details
                                 </button>
                                 <button className="btn" style={{ fontSize: '13px' }} onClick={() => fileRef.current?.click()}>
-                                    {entry?.assetId ? '🔄 Replace Image' : '📷 Upload Image'}
+                                    {entry?.assetId ? 'Replace Image' : 'Upload Image'}
                                 </button>
                                 {entry?.assetId && (
                                     <button
                                         className="btn-danger"
                                         onClick={handleRemoveImage}
                                     >
-                                        🗑 Remove Image
+                                        Remove Image
                                     </button>
                                 )}
                             </div>

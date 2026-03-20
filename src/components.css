@@ -158,9 +158,10 @@
 }
 
 .round-winner-cell {
-    background: rgba(193, 68, 14, 0.08) !important;
-    border: 1px solid rgba(193, 68, 14, 0.3) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: none;
+    font-weight: 700;
 }
 
 .empty-score-cell {
@@ -316,8 +317,9 @@
 }
 
 .public-score-cell.round-winner-cell {
-    background: rgba(201, 162, 39, 0.08); /* Amber-tinted background */
-    border-bottom: 2px solid var(--accent); /* Pronounced highlight */
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    font-weight: 700;
 }
 
 /* ── Public Discovery (Listing) ──────────────────────────────────────── */
@@ -368,6 +370,85 @@
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+/* ── Arena Preview Stack ────────────────────────────────────────────── */
+
+.arena-preview-stack {
+    height: 140px;
+    width: 100%;
+    position: relative;
+    border-radius: var(--radius-btn);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.arena-preview-stack.empty {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--border);
+}
+
+.arena-preview-placeholder {
+    color: var(--muted);
+    opacity: 0.3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arena-preview-img {
+    border-radius: 6px;
+    object-fit: contain;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg);
+    position: absolute;
+    width: calc(100% - 32px);
+    height: 120px;
+    max-width: 200px;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.public-arena-card:hover .arena-preview-stack.multiple .arena-preview-img.left {
+    transform: rotate(-6deg) translateX(-15%) translateY(5%);
+}
+
+.public-arena-card:hover .arena-preview-stack.multiple .arena-preview-img.right {
+    transform: rotate(6deg) translateX(15%) translateY(3%);
+}
+
+.public-arena-card:hover .arena-preview-stack.multiple .arena-preview-img.center {
+    transform: rotate(0deg) scale(1.08);
+}
+
+.arena-preview-stack.multiple .arena-preview-img.center {
+    z-index: 3;
+    transform: rotate(0deg) scale(1.05);
+}
+
+.arena-preview-stack.multiple .arena-preview-img.left {
+    z-index: 2;
+    transform: rotate(-4deg) translateX(-10%) translateY(4%);
+    filter: brightness(0.65);
+}
+
+.arena-preview-stack.multiple .arena-preview-img.right {
+    z-index: 1;
+    transform: rotate(4deg) translateX(10%) translateY(2%);
+    filter: brightness(0.45);
+}
+
+.arena-preview-stack.single .arena-preview-img.center {
+    position: static;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .public-arena-card-meta {

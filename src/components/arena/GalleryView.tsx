@@ -162,7 +162,7 @@ export function GalleryView({ onNavigateToCell }: GalleryViewProps) {
                                     <img
                                         src={url}
                                         alt={`${tile.contestantName} — ${tile.roundTitle}`}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                     />
                                 ) : (
                                     <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Loading…</span>

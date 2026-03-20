@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useRef } from 'react';
+import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { useStore } from '../../state/store';
 import { EntryModal } from './EntryModal';
 
@@ -19,6 +19,45 @@ interface ScoreCellProps {
     roundTitle?: string;
     isWinner?: boolean;
     locked?: boolean;
+    highlightMissingImage?: boolean;
+    showImage?: boolean;
+}
+
+// Sub-component to manage lazy blob loading independently for inline backgrounds
+function InlineBackground({ assetId }: { assetId: string }) {
+    const getAssetBlob = useStore(s => s.getAssetBlob);
+    const [url, setUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        getAssetBlob(assetId).then(blob => {
+            if (active && blob) {
+                setUrl(URL.createObjectURL(blob));
+            }
+        });
+        return () => {
+            active = false;
+        };
+    }, [assetId, getAssetBlob]);
+
+    useEffect(() => {
+        return () => {
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [url]);
+
+    if (!url) return null;
+    return (
+        <div style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            backgroundImage: `url(${url})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.35,
+            pointerEvents: 'none'
+        }} />
+    );
 }
 
 export const ScoreCell = memo(function ScoreCell({
@@ -35,7 +74,9 @@ export const ScoreCell = memo(function ScoreCell({
     contestantName,
     roundTitle,
     isWinner,
-    locked
+    locked,
+    highlightMissingImage,
+    showImage
 }: ScoreCellProps) {
     const entry = useStore(useCallback(s => s.entriesById[entryId], [entryId]));
     const upsertEntry = useStore(s => s.upsertEntry);
@@ -158,8 +199,18 @@ export const ScoreCell = memo(function ScoreCell({
     return (
         <td
             className={`${val === '' ? 'empty-score-cell' : ''} ${isWinner ? 'round-winner-cell' : ''}`}
-            style={{ border: '1px solid var(--border)', padding: '0', textAlign: 'center', position: 'relative' }}
+            style={{ 
+                border: '1px solid var(--border)', 
+                padding: '0', 
+                textAlign: 'center', 
+                position: 'relative',
+                boxShadow: highlightMissingImage ? 'inset 0 0 0 2px var(--danger)' : undefined
+            }}
         >
+            {showImage && hasImage && (
+                <InlineBackground assetId={entry!.assetId!} />
+            )}
+
             {mode === 'numeric' && (
                 <input
                     ref={inputRef}
@@ -181,14 +232,18 @@ export const ScoreCell = memo(function ScoreCell({
                         textAlign: 'center',
                         background: 'transparent',
                         fontSize: '16px',
+                        zIndex: 1,
+                        position: 'relative',
+                        textShadow: showImage && hasImage ? '0 1px 4px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,1)' : 'none',
+                        color: 'var(--text)'
                     }}
                     placeholder="-"
                 />
             )}
 
             {mode === 'slider' && (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8px', gap: '4px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 8px', gap: '4px', position: 'relative', zIndex: 1 }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', textShadow: showImage && hasImage ? '0 1px 4px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,1)' : 'none' }}>
                         {isEditing ? draftValue : (val === '' ? '-' : val)}
                     </span>
                     <input
@@ -214,7 +269,7 @@ export const ScoreCell = memo(function ScoreCell({
                 const isActive = typeof val === 'number';
                 return (
                     <div
-                        style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}
+                        style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', position: 'relative', zIndex: 1 }}
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         ref={inputRef as any}
                         id={`cell-${rowIdx}-${colIdx}`} // Let keyboard nav focus the wrapper if we gave it tabindex, but we'll stick to inputRef for numeric/slider. Stars are mouse-oriented mostly unless padded with tabindex.
@@ -295,6 +350,7 @@ export const ScoreCell = memo(function ScoreCell({
                     width: '18px',
                     height: '18px',
                     borderRadius: '2px',
+                    zIndex: 2, // Ensure it sits above input
                     background: hasImage
                         ? 'var(--accent-dim)'
                         : 'rgba(255,255,255,0.04)',

@@ -57,9 +57,10 @@ function WeightEditor({ roundId, weight, locked }: { roundId: string, weight: nu
 interface ScoreTableProps {
     isCompact?: boolean;
     locked?: boolean;
+    showImages?: boolean;
 }
 
-export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreTableProps) {
+export const ScoreTable = memo(function ScoreTable({ isCompact, locked, showImages }: ScoreTableProps) {
     const activeCompetition = useStore(s => s.activeCompetition);
     const contestants = useStore(s => s.contestants);
     const rounds = useStore(s => s.rounds);
@@ -263,6 +264,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
                                         isWinner={isWinner}
                                         locked={locked}
                                         highlightMissingImage={!entriesById[entryId]?.assetId}
+                                        showImage={showImages}
                                     />
                                 )
                             })}
