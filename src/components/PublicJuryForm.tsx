@@ -26,6 +26,7 @@ export default function PublicJuryForm({ payload, onSubmit, onCancel }: PublicJu
     });
     const [submitState, setSubmitState] = useState<SubmitState>('idle');
     const [errorMsg, setErrorMsg] = useState('');
+    const [cooldownSec, setCooldownSec] = useState(0);
 
     const updateScore = useCallback((roundId: string, contestantId: string, value: number | undefined) => {
         setScores(prev => {
@@ -79,6 +80,14 @@ export default function PublicJuryForm({ payload, onSubmit, onCancel }: PublicJu
         try {
             await onSubmit(juryName || 'Anonymous', submissionPayload);
             setSubmitState('success');
+            // Start 30-second cooldown to prevent rapid re-submissions
+            setCooldownSec(30);
+            const interval = setInterval(() => {
+                setCooldownSec(prev => {
+                    if (prev <= 1) { clearInterval(interval); return 0; }
+                    return prev - 1;
+                });
+            }, 1000);
         } catch (err) {
             setErrorMsg(err instanceof Error ? err.message : 'Submission failed.');
             setSubmitState('error');
@@ -164,7 +173,7 @@ export default function PublicJuryForm({ payload, onSubmit, onCancel }: PublicJu
                                     {r.title}
                                     {competition.isWeighted && (
                                         <div style={{ color: 'var(--muted)', fontSize: '11px', marginTop: '4px' }}>
-                                            Weight: {r.weight.toFixed(1)}
+                                            Weight: {(r.weight ?? 1).toFixed(1)}
                                         </div>
                                     )}
                                 </td>
@@ -215,10 +224,10 @@ export default function PublicJuryForm({ payload, onSubmit, onCancel }: PublicJu
                 <button
                     className="btnPrimary"
                     onClick={handleSubmit}
-                    disabled={!allFilled || submitState === 'submitting'}
+                    disabled={!allFilled || submitState === 'submitting' || cooldownSec > 0}
                     style={{ minWidth: '160px' }}
                 >
-                    {submitState === 'submitting' ? 'Submitting…' : 'Submit Scores'}
+                    {submitState === 'submitting' ? 'Submitting…' : cooldownSec > 0 ? `Wait ${cooldownSec}s` : 'Submit Scores'}
                 </button>
             </div>
         </div>

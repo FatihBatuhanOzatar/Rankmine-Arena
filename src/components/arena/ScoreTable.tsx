@@ -262,6 +262,7 @@ export const ScoreTable = memo(function ScoreTable({ isCompact, locked }: ScoreT
                                         roundTitle={r.title}
                                         isWinner={isWinner}
                                         locked={locked}
+                                        highlightMissingImage={!entriesById[entryId]?.assetId}
                                     />
                                 )
                             })}

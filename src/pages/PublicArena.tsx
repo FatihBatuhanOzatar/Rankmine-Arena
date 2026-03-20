@@ -29,7 +29,7 @@ export default function PublicArena() {
     const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(() => {
         if (!slug) return false;
         try {
-            return !!localStorage.getItem(SUBMITTED_KEY(slug));
+            return !!(localStorage.getItem(SUBMITTED_KEY(slug)) || sessionStorage.getItem(SUBMITTED_KEY(slug)));
         } catch { return false; }
     });
 
@@ -80,10 +80,11 @@ export default function PublicArena() {
             payload.rounds.length
         );
 
-        // Mark as submitted in localStorage
+        // Mark as submitted
         try {
             localStorage.setItem(SUBMITTED_KEY(slug), '1');
-        } catch { /* localStorage unavailable */ }
+            sessionStorage.setItem(SUBMITTED_KEY(slug), '1');
+        } catch { /* storage unavailable */ }
         setAlreadySubmitted(true);
 
         // Refetch submissions to update aggregate
@@ -268,14 +269,31 @@ function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitte
         [submissions, payload]
     );
 
-    // Select which entries to use for display
     const activeEntries = resultsTab === 'jury' && hasJurySubmissions ? juryEntries : organizerEntries;
 
-    const entriesById = useMemo(() => {
+    const activeEntriesById = useMemo(() => {
         const map: Record<string, Entry> = {};
         for (const e of activeEntries) map[e.id] = e;
         return map;
     }, [activeEntries]);
+
+    const displayOrganizerEntries = useMemo(() =>
+        organizerEntries.map(e => ({
+            roundId: e.roundId,
+            contestantId: e.contestantId,
+            score: e.score,
+        })),
+        [organizerEntries]
+    );
+
+    const displayJuryEntries = useMemo(() =>
+        juryEntries.map(e => ({
+            roundId: e.roundId,
+            contestantId: e.contestantId,
+            score: e.score,
+        })),
+        [juryEntries]
+    );
 
     const makeId = (compId: string, roundId: string, contestantId: string) =>
         `${compId}::${roundId}::${contestantId}`;
@@ -286,23 +304,13 @@ function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitte
     );
 
     const roundWinners = useMemo(
-        () => computeRoundWinners(domainRounds, domainContestants, entriesById, makeId, payload.sourceCompetitionId),
-        [domainRounds, domainContestants, entriesById, payload.sourceCompetitionId]
+        () => computeRoundWinners(domainRounds, domainContestants, activeEntriesById, makeId, payload.sourceCompetitionId),
+        [domainRounds, domainContestants, activeEntriesById, payload.sourceCompetitionId]
     );
 
     const summary = useMemo(
         () => computeArenaSummary(domainContestants, activeEntries, domainRounds, roundWinners, competition.isWeighted),
         [domainContestants, activeEntries, domainRounds, roundWinners, competition.isWeighted]
-    );
-
-    // Build display entries for score table
-    const displayEntries = useMemo(() =>
-        activeEntries.map(e => ({
-            roundId: e.roundId,
-            contestantId: e.contestantId,
-            score: e.score,
-        })),
-        [activeEntries]
     );
 
     return (
@@ -371,13 +379,15 @@ function PublicArenaContent({ payload, submissions, onJuryClick, alreadySubmitte
                     <PublicScoreTable
                         rounds={rounds}
                         contestants={contestants}
-                        entries={displayEntries}
+                        organizerEntries={displayOrganizerEntries}
+                        juryEntries={displayJuryEntries}
                         payloadEntries={entries}
                         roundWinners={roundWinners}
                         scoringMode={competition.scoringMode}
                         scoreMin={competition.scoreMin}
                         scoreMax={competition.scoreMax}
                         isWeighted={competition.isWeighted}
+                        hasJurySubmissions={hasJurySubmissions}
                     />
                 </div>
             </div>
@@ -496,23 +506,33 @@ function PublicSummary({ summary, isWeighted }: { summary: ArenaSummaryType; isW
 interface PublicScoreTableProps {
     rounds: PublishedArenaPayload['rounds'];
     contestants: PublishedArenaPayload['contestants'];
-    entries: { roundId: string; contestantId: string; score?: number }[];
+    organizerEntries: { roundId: string; contestantId: string; score?: number }[];
+    juryEntries: { roundId: string; contestantId: string; score?: number }[];
     payloadEntries: PublishedArenaPayload['entries'];
     roundWinners: Map<string, string[]>;
     scoringMode: string;
     scoreMin: number;
     scoreMax: number;
     isWeighted: boolean;
+    hasJurySubmissions: boolean;
 }
 
-function PublicScoreTable({ rounds, contestants, entries, payloadEntries, roundWinners, scoringMode, scoreMin, scoreMax, isWeighted }: PublicScoreTableProps) {
-    const scoreLookup = useMemo(() => {
+function PublicScoreTable({ rounds, contestants, organizerEntries, juryEntries, payloadEntries, roundWinners, scoringMode, scoreMin, scoreMax, isWeighted, hasJurySubmissions }: PublicScoreTableProps) {
+    const organizerLookup = useMemo(() => {
         const map = new Map<string, number | undefined>();
-        for (const e of entries) {
+        for (const e of organizerEntries) {
             map.set(`${e.roundId}::${e.contestantId}`, e.score);
         }
         return map;
-    }, [entries]);
+    }, [organizerEntries]);
+
+    const juryLookup = useMemo(() => {
+        const map = new Map<string, number | undefined>();
+        for (const e of juryEntries) {
+            map.set(`${e.roundId}::${e.contestantId}`, e.score);
+        }
+        return map;
+    }, [juryEntries]);
 
     const assetLookup = useMemo(() => {
         const map = new Map<string, string>();
@@ -576,7 +596,8 @@ function PublicScoreTable({ rounds, contestants, entries, payloadEntries, roundW
                                     )}
                                 </td>
                                 {contestants.map(c => {
-                                    const score = scoreLookup.get(`${r.id}::${c.id}`);
+                                    const orgScore = organizerLookup.get(`${r.id}::${c.id}`);
+                                    const juryScore = juryLookup.get(`${r.id}::${c.id}`);
                                     const assetUrl = assetLookup.get(`${r.id}::${c.id}`);
                                     const isWinner = winners.includes(c.id);
                                     return (
@@ -590,8 +611,19 @@ function PublicScoreTable({ rounds, contestants, entries, payloadEntries, roundW
                                                         <img src={assetUrl} alt="Entry content" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain' }} loading="lazy" />
                                                     </div>
                                                 )}
-                                                <div style={{ textAlign: 'center' }}>
-                                                    {renderScore(score)}
+                                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg)', padding: '6px 8px', borderRadius: '4px' }}>
+                                                        <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Baseline</span>
+                                                        {renderScore(orgScore)}
+                                                    </div>
+                                                    {hasJurySubmissions && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--accent-alpha)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--accent)' }}>
+                                                            <span style={{ fontSize: '11px', color: 'var(--accent)', textTransform: 'uppercase' }}>Community</span>
+                                                            <div style={{ color: 'var(--accent)' }}>
+                                                                {renderScore(juryScore)}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
