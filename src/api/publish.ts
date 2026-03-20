@@ -7,9 +7,11 @@ import type { PublishedArenaPayload } from '../domain/publishedArena';
 export async function publishArena(
     payload: PublishedArenaPayload,
     slug: string
-): Promise<void> {
+): Promise<{ skippedAssets: number }> {
     const store = useStore.getState();
     const finalPayload = { ...payload, entries: [...payload.entries] };
+
+    let skippedAssets = 0;
 
     // Upload local assets to Supabase storage
     for (let i = 0; i < finalPayload.entries.length; i++) {
@@ -35,6 +37,8 @@ export async function publishArena(
                         ...entry,
                         publicAssetUrl: data.publicUrl
                     };
+                } else {
+                    skippedAssets++;
                 }
             }
             // Strip local DB reference from remote payload
@@ -55,6 +59,8 @@ export async function publishArena(
     if (error) {
         throw new Error(`Publish failed: ${error.message}`);
     }
+
+    return { skippedAssets };
 }
 
 // ── Fetch (public read) ─────────────────────────────────────────────
