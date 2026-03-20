@@ -4,9 +4,10 @@ import { useStore } from '../state/store';
 import { importCompetition } from '../io';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PublicArenaList } from '../components/PublicArenaList';
+import { showToast } from '../components/Toast';
 export default function Landing() {
     const navigate = useNavigate();
-    const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate, createGridCompetition } = useStore();
+    const { competitions, templates, loadCompetitions, loadTemplates, createCompetition, createFromTemplate, createCompetitionFromTemplate, deleteCompetition, deleteTemplate } = useStore();
 
     useEffect(() => {
         loadCompetitions();
@@ -32,11 +33,16 @@ export default function Landing() {
             const file = e.target.files?.[0];
             if (!file) return;
             const newId = await importCompetition(file);
+            showToast('Competition imported successfully!', 'success');
             navigate(`/arena/${newId}`);
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                alert(`Failed to import: ${err.message}`);
-            }
+            showToast(
+                err instanceof Error ? `Import failed: ${err.message}` : 'Import failed: unknown error',
+                'error'
+            );
+        } finally {
+            // Reset file input so same file can be re-imported
+            e.target.value = '';
         }
     };
 
@@ -59,25 +65,25 @@ export default function Landing() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px', marginBottom: '60px' }}>
                 <div 
-                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#181818', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(193,68,14,0.5)'; e.currentTarget.style.background = '#1c1c1c'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#181818'; }}
+                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.background = 'var(--panel-elevated)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--panel)'; }}
                     onClick={handleCreateEmpty}
                 >
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#fff', fontWeight: 'bold' }}>New Empty Arena</h2>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--text)', fontWeight: 'bold' }}>New Empty Arena</h2>
                     <p style={{ color: 'var(--muted)', marginBottom: '24px', fontSize: '14px' }}>Start from scratch with no contestants or prompts.</p>
-                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: '#C1440E', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleCreateEmpty}>Create New</button>
+                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleCreateEmpty}>Create New</button>
                 </div>
 
                 <div 
-                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#181818', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(193,68,14,0.5)'; e.currentTarget.style.background = '#1c1c1c'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#181818'; }}
+                    style={{ padding: '32px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.background = 'var(--panel-elevated)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--panel)'; }}
                     onClick={handleLoadTemplate}
                 >
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#fff', fontWeight: 'bold' }}>AI Image Models Battle</h2>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--text)', fontWeight: 'bold' }}>AI Image Models Battle</h2>
                     <p style={{ color: 'var(--muted)', marginBottom: '24px', fontSize: '14px' }}>Load a pre-configured template with 5 models and 5 prompts.</p>
-                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: '#C1440E', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleLoadTemplate}>Load Template</button>
+                    <button style={{ padding: '12px 32px', fontSize: '16px', borderRadius: '6px', background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={handleLoadTemplate}>Load Template</button>
                 </div>
             </div>
 
@@ -88,9 +94,9 @@ export default function Landing() {
                         {templates.map(t => (
                             <div
                                 key={t.id}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: '#141414', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1a1a'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#141414'; }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: 'var(--panel)', borderBottom: '1px solid var(--border)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel-elevated)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--panel)'; }}
                                 onClick={async () => {
                                     const newId = await createCompetitionFromTemplate(t.id);
                                     navigate(`/arena/${newId}`);
@@ -105,14 +111,14 @@ export default function Landing() {
                                 }}
                             >
                                 <div>
-                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#fff', fontWeight: 500 }}>{t.name}</h3>
-                                    <div style={{ fontSize: '12px', color: '#555' }}>Format Template • Updated: {new Date(t.updatedAt).toLocaleDateString()}</div>
+                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--text)', fontWeight: 500 }}>{t.name}</h3>
+                                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Format Template • Updated: {new Date(t.updatedAt).toLocaleDateString()}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
-                                        style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#C1440E' }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.color = '#666' }}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--muted)' }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDelete('template', t.id, t.name);
@@ -130,14 +136,18 @@ export default function Landing() {
             <h2 style={{ fontSize: '1.1rem', color: '#666', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Recent Battles</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0', marginBottom: '40px' }}>
                 {competitions.length === 0 ? (
-                    <p style={{ color: 'var(--muted)' }}>No recent competitions.</p>
+                    <div style={{ padding: '32px 24px', textAlign: 'center', color: 'var(--muted)', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '12px' }}>⚔️</div>
+                        <p style={{ margin: '0 0 8px 0', fontWeight: 500, color: 'var(--text)' }}>No battles yet</p>
+                        <p style={{ margin: 0, fontSize: '14px' }}>Create a new arena above to start your first battle.</p>
+                    </div>
                 ) : (
                     competitions.map(c => (
                         <div
                             key={c.id}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: '#141414', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1a1a'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = '#141414'; }}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', cursor: 'pointer', transition: 'all 0.2s ease', background: 'var(--panel)', borderBottom: '1px solid var(--border)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--panel-elevated)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--panel)'; }}
                             onClick={() => navigate(`/arena/${c.id}`)}
                             tabIndex={0}
                             onKeyDown={(e) => {
@@ -148,14 +158,14 @@ export default function Landing() {
                             }}
                         >
                             <div>
-                                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#fff', fontWeight: 500 }}>{c.title}</h3>
-                                <div style={{ fontSize: '12px', color: '#555' }}>Updated: {new Date(c.updatedAt).toLocaleString()}</div>
+                                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--text)', fontWeight: 500 }}>{c.title}</h3>
+                                <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Updated: {new Date(c.updatedAt).toLocaleString()}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
-                                    style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.color = '#C1440E' }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.color = '#666' }}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', transition: 'color 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)' }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--muted)' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleDelete('competition', c.id, c.title);
@@ -179,25 +189,6 @@ export default function Landing() {
                 <PublicArenaList />
             </div>
 
-            {import.meta.env.DEV && (
-                <div className="card" style={{ marginTop: '40px', borderColor: 'var(--amber)', borderStyle: 'dashed' }}>
-                    <h3 style={{ margin: '0 0 16px 0', color: 'var(--amber)' }}>🛠 Dev Tools (Stress Testing)</h3>
-                    <div style={{ display: 'flex', gap: '16px' }}>
-                        <button className="btn" onClick={async () => {
-                            const id = await createGridCompetition(50);
-                            navigate(`/arena/${id}`);
-                        }}>
-                            Generate 50x50 Grid
-                        </button>
-                        <button className="btn" onClick={async () => {
-                            const id = await createGridCompetition(100);
-                            navigate(`/arena/${id}`);
-                        }}>
-                            Generate 100x100 Grid
-                        </button>
-                    </div>
-                </div>
-            )}
 
             <ConfirmDialog
                 isOpen={!!confirmDelete}
